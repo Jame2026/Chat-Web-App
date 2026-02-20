@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Search, Plus, Hash, User, Users, Settings as SettingsIcon } from 'lucide-react';
 
-const Sidebar = ({ channels, users, activeUser, onSelectUser, onOpenSettings, onOpenProfile, blockedUsers, userSettings, userName, userPhotoURL, userStatus, onOpenDirectory }) => {
+const Sidebar = ({ channels, users, activeChannel, activeUser, onSelectUser, onOpenSettings, onOpenProfile, blockedUsers, userSettings, userName, userPhotoURL, userStatus, onOpenDirectory, onSelectChannel, onCreateGroup }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [hoveredUserId, setHoveredUserId] = useState(null);
 
@@ -57,23 +57,33 @@ const Sidebar = ({ channels, users, activeUser, onSelectUser, onOpenSettings, on
               borderRadius: '50%',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center'
+              justifyContent: 'center',
+              transition: 'transform 0.2s'
             }}
+            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
           >
             <Users size={20} />
           </button>
-          <button style={{
-            background: 'var(--bg-tertiary)',
-            border: 'none',
-            color: 'var(--text-primary)',
-            cursor: 'pointer',
-            width: '40px',
-            height: '40px',
-            borderRadius: '50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
+          <button
+            onClick={onCreateGroup}
+            title="Create Group"
+            style={{
+              background: 'var(--bg-tertiary)',
+              border: 'none',
+              color: 'var(--text-primary)',
+              cursor: 'pointer',
+              width: '40px',
+              height: '40px',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'transform 0.2s'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+          >
             <Plus size={20} />
           </button>
         </div>
@@ -114,77 +124,127 @@ const Sidebar = ({ channels, users, activeUser, onSelectUser, onOpenSettings, on
           </div>
         )}
 
-        {/* Users List Styled like Messenger */}
-        {filteredUsers.map(user => (
-          <div
-            key={user.id}
-            onClick={() => onSelectUser(user.id)}
-            onMouseEnter={() => setHoveredUserId(user.id)}
-            onMouseLeave={() => setHoveredUserId(null)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              padding: '10px 12px',
-              borderRadius: '12px',
-              marginBottom: '4px',
-              cursor: 'pointer',
-              backgroundColor: activeUser === user.id ? 'var(--bg-tertiary)' : 'transparent',
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-              transform: hoveredUserId === user.id ? 'scale(1.02) translateY(-2px)' : 'scale(1) translateY(0)',
-              boxShadow: hoveredUserId === user.id ? '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)' : 'none',
-              position: 'relative',
-              overflow: 'hidden'
-            }}
-          >
-            <div style={{ position: 'relative', marginRight: '12px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+          {/* Groups integrated into the list */}
+          {filteredChannels.map(channel => (
+            <div
+              key={channel.id}
+              onClick={() => onSelectChannel(channel.id)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                padding: '10px 12px',
+                borderRadius: '12px',
+                marginBottom: '4px',
+                cursor: 'pointer',
+                backgroundColor: activeChannel === channel.id ? 'var(--bg-tertiary)' : 'transparent',
+                transition: 'all 0.2s',
+                gap: '12px'
+              }}
+              onMouseEnter={(e) => {
+                if (activeChannel !== channel.id) e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
+              }}
+              onMouseLeave={(e) => {
+                if (activeChannel !== channel.id) e.currentTarget.style.backgroundColor = 'transparent';
+              }}
+            >
               <div style={{
                 width: 'var(--avatar-size-lg)',
                 height: 'var(--avatar-size-lg)',
                 borderRadius: '50%',
-                background: user.photoURL ? `url(${user.photoURL}) center/cover` : (userSettings[user.id]?.themeColor || 'var(--accent-color)'),
+                background: 'var(--accent-color)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: 'white',
                 fontSize: '18px',
-                fontWeight: '600'
+                fontWeight: '600',
+                flexShrink: 0
               }}>
-                {!user.photoURL && (userSettings[user.id]?.nickname || user.name).charAt(0).toUpperCase()}
+                <Users size={20} />
               </div>
-              {user.online && (
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {channel.name}
+                  </div>
+                  <span style={{ fontSize: '9px', fontWeight: '800', backgroundColor: 'rgba(var(--accent-color-rgb), 0.1)', color: 'var(--accent-color)', padding: '2px 6px', borderRadius: '6px', textTransform: 'uppercase' }}>Group</span>
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {Array.isArray(channel.members) ? channel.members.length : channel.members} members
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {filteredChannels.length > 0 && filteredUsers.length > 0 && (
+            <div style={{ height: '1px', backgroundColor: 'var(--border-color)', margin: '8px 12px', opacity: 0.5 }} />
+          )}
+
+          {/* Personal Chats */}
+          {filteredUsers.map(user => (
+            <div
+              key={user.id}
+              onClick={() => onSelectUser(user.id)}
+              onMouseEnter={() => setHoveredUserId(user.id)}
+              onMouseLeave={() => setHoveredUserId(null)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                padding: '10px 12px',
+                borderRadius: '12px',
+                marginBottom: '4px',
+                cursor: 'pointer',
+                backgroundColor: activeUser === user.id ? 'var(--bg-tertiary)' : 'transparent',
+                transition: 'all 0.2s',
+                gap: '12px'
+              }}
+            >
+              <div style={{ position: 'relative', flexShrink: 0 }}>
                 <div style={{
-                  position: 'absolute',
-                  bottom: '2px',
-                  right: '2px',
-                  width: '12px',
-                  height: '12px',
+                  width: 'var(--avatar-size-lg)',
+                  height: 'var(--avatar-size-lg)',
                   borderRadius: '50%',
-                  backgroundColor: 'var(--success-color)',
-                  border: '2px solid var(--bg-primary)'
-                }} />
-              )}
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '14px', fontWeight: '600', color: blockedUsers.includes(user.id) ? 'var(--text-secondary)' : 'var(--text-primary)' }}>
-                {userSettings[user.id]?.nickname || user.name}
-                {blockedUsers.includes(user.id) && <span style={{ fontSize: '10px', marginLeft: '8px', color: '#ff4444', border: '1px solid #ff4444', padding: '0 4px', borderRadius: '4px', textTransform: 'uppercase' }}>Blocked</span>}
+                  background: user.photoURL ? `url(${user.photoURL}) center/cover` : (userSettings[user.id]?.themeColor || 'var(--accent-color)'),
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  fontSize: '18px',
+                  fontWeight: '600'
+                }}>
+                  {!user.photoURL && (userSettings[user.id]?.nickname || user.name).charAt(0).toUpperCase()}
+                </div>
+                {user.online && (
+                  <div style={{
+                    position: 'absolute',
+                    bottom: '2px',
+                    right: '2px',
+                    width: '12px',
+                    height: '12px',
+                    borderRadius: '50%',
+                    backgroundColor: 'var(--success-color)',
+                    border: '2px solid var(--bg-primary)'
+                  }} />
+                )}
               </div>
-              <div style={{ fontSize: '11px', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {(() => {
-                  if (blockedUsers.includes(user.id)) return 'You have blocked this user';
-
-                  // Verification: Check if heartbeat is recent (within 60s)
-                  const lastSeenDate = user.lastSeen?.toDate ? user.lastSeen.toDate() : new Date(user.lastSeen);
-                  const isTrulyOnline = user.online && (new Date() - lastSeenDate) < 60000;
-
-                  return isTrulyOnline ? 'Active now' : `Active ${formatRelativeTime(user.lastSeen)}`;
-                })()}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '14px', fontWeight: '700', color: blockedUsers.includes(user.id) ? 'var(--text-secondary)' : 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {userSettings[user.id]?.nickname || user.name}
+                  {blockedUsers.includes(user.id) && <span style={{ fontSize: '10px', marginLeft: '8px', color: '#ff4444', border: '1px solid #ff4444', padding: '0 4px', borderRadius: '4px', textTransform: 'uppercase' }}>Blocked</span>}
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {(() => {
+                    if (blockedUsers.includes(user.id)) return 'You blocked this user';
+                    const lastSeenDate = user.lastSeen?.toDate ? user.lastSeen.toDate() : new Date(user.lastSeen);
+                    const isTrulyOnline = user.online && (new Date() - lastSeenDate) < 60000;
+                    return isTrulyOnline ? 'Active now' : `Active ${formatRelativeTime(user.lastSeen)}`;
+                  })()}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-
-        {/* Channels removed as requested */}
+          ))}
+        </div>
       </div>
 
       {/* User Profile at Bottom */}

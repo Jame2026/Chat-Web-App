@@ -6,13 +6,14 @@ import SettingsModal from './components/SettingsModal';
 import UserSettingsModal from './components/UserSettingsModal';
 import ProfileModal from './components/ProfileModal';
 import UsersModal from './components/UsersModal';
+import CreateGroupModal from './components/CreateGroupModal';
 import Auth from './components/Auth';
 import { motion, AnimatePresence } from 'framer-motion';
 import './App.css';
 
 import { auth, db, storage } from './firebase';
 import { onAuthStateChanged, updateProfile } from 'firebase/auth';
-import { doc, onSnapshot, setDoc, updateDoc, writeBatch, collection, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, updateDoc, writeBatch, collection, getDocs, query, where, serverTimestamp, addDoc, orderBy } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, uploadBytesResumable } from 'firebase/storage';
 import { sendMessage, subscribeToMessages, subscribeToUsers, toggleReaction, editMessage, setSharedTheme, subscribeToSharedTheme, subscribeToAllMessages, markAsSeen, toggleBlockUser } from './services/firebaseService';
 import { Bell } from 'lucide-react';
@@ -28,6 +29,11 @@ function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [userName, setUserName] = useState('');
   const [userBio, setUserBio] = useState('');
+  const [userLocation, setUserLocation] = useState('');
+  const [userInstagram, setUserInstagram] = useState('');
+  const [userTelegram, setUserTelegram] = useState('');
+  const [userLink, setUserLink] = useState('');
+  const [userFacebook, setUserFacebook] = useState('');
   const [isUserSettingsOpen, setIsUserSettingsOpen] = useState(false);
   const [currentSharedTheme, setCurrentSharedTheme] = useState(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -38,6 +44,8 @@ function App() {
   const [messages, setMessages] = useState([]);
   const [users, setUsers] = useState([]);
   const [activeNotification, setActiveNotification] = useState(null);
+  const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
+  const [channels, setChannels] = useState([]);
   const sessionStartTime = useRef(Date.now());
 
   useEffect(() => {
@@ -66,6 +74,11 @@ function App() {
         setUserName(data.displayName || currentUser.displayName || 'User');
         setUserBio(data.bio || '');
         setUserPhotoURL(data.photoURL || currentUser.photoURL || '');
+        setUserLocation(data.location || '');
+        setUserInstagram(data.instagram || '');
+        setUserTelegram(data.telegram || '');
+        setUserLink(data.link || '');
+        setUserFacebook(data.facebook || '');
         if (data.status) setUserStatus(data.status);
         if (data.wallpaper) setUserWallpaper(data.wallpaper);
         if (data.blockedUsers) setBlockedUsers(data.blockedUsers);
@@ -177,6 +190,25 @@ function App() {
   useEffect(() => {
     if (currentUser) {
       const unsubscribe = subscribeToUsers(setUsers);
+      return () => unsubscribe();
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (currentUser) {
+      const q = query(
+        collection(db, 'groups'),
+        where('members', 'array-contains', currentUser.uid)
+      );
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const fetchedGroups = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })).sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+        setChannels(fetchedGroups);
+      }, (error) => {
+        console.error("Group fetch error:", error);
+      });
       return () => unsubscribe();
     }
   }, [currentUser]);
@@ -295,7 +327,12 @@ function App() {
         photoURL: userPhotoURL,
         bio: userBio,
         status: userStatus,
-        wallpaper: userWallpaper
+        wallpaper: userWallpaper,
+        location: userLocation,
+        instagram: userInstagram,
+        telegram: userTelegram,
+        link: userLink,
+        facebook: userFacebook
       });
     } else {
       setProfileUser(userObj);
@@ -307,12 +344,19 @@ function App() {
     localStorage.setItem('chat-app-theme', theme);
   }, [theme]);
 
-  const [channels] = useState([
-    { id: 'general', name: 'general', members: 24 },
-    { id: 'random', name: 'random', members: 12 },
-    { id: 'design', name: 'design', members: 8 },
-    { id: 'development', name: 'development', members: 15 },
-  ]);
+  const handleCreateGroup = async (groupData) => {
+    try {
+      const docRef = await addDoc(collection(db, 'groups'), {
+        ...groupData,
+        createdAt: serverTimestamp()
+      });
+      handleSelectChannel(docRef.id);
+      setMobileView('chat');
+    } catch (error) {
+      console.error("Error creating group:", error);
+      throw error;
+    }
+  };
 
   const handleUpdateName = async (newName) => {
     if (!currentUser) return;
@@ -462,6 +506,18 @@ function App() {
       await updateDoc(doc(db, 'users', currentUser.uid), { wallpaper });
       setUserWallpaper(wallpaper);
     } catch (error) { console.error(error); }
+  };
+
+  const handleUpdateSocials = async (socials) => {
+    if (!currentUser) return;
+    try {
+      await updateDoc(doc(db, 'users', currentUser.uid), socials);
+      if (socials.location !== undefined) setUserLocation(socials.location);
+      if (socials.instagram !== undefined) setUserInstagram(socials.instagram);
+      if (socials.telegram !== undefined) setUserTelegram(socials.telegram);
+      if (socials.link !== undefined) setUserLink(socials.link);
+      if (socials.facebook !== undefined) setUserFacebook(socials.facebook);
+    } catch (error) { console.error("Error updating socials:", error); }
   };
 
   const handleDeleteUser = (userId) => {
@@ -711,6 +767,7 @@ function App() {
           user={currentUser}
           userStatus={userStatus}
           onOpenDirectory={() => setIsUsersDirectoryOpen(true)}
+          onCreateGroup={() => setIsCreateGroupOpen(true)}
         />
       </div>
 
@@ -760,6 +817,12 @@ function App() {
         onUpdateName={handleUpdateName}
         userBio={userBio}
         onUpdateBio={handleUpdateBio}
+        userLocation={userLocation}
+        userInstagram={userInstagram}
+        userTelegram={userTelegram}
+        userLink={userLink}
+        userFacebook={userFacebook}
+        onUpdateSocials={handleUpdateSocials}
         onUpdatePhoto={handleUpdatePhoto}
         onOpenProfile={handleViewProfile}
         onLogout={handleLogout}
@@ -799,6 +862,15 @@ function App() {
         users={users}
         onSelectUser={handleSelectUser}
         currentUser={currentUser}
+        theme={theme}
+      />
+
+      <CreateGroupModal
+        isOpen={isCreateGroupOpen}
+        onClose={() => setIsCreateGroupOpen(false)}
+        users={users}
+        currentUser={currentUser}
+        onCreateGroup={handleCreateGroup}
         theme={theme}
       />
 

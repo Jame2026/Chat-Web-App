@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Phone, Calendar, MapPin, Instagram, Twitter, Github, MessageCircle, Heart, User, ExternalLink, Settings, Shield } from 'lucide-react';
+import { X, Phone, Calendar, MapPin, Instagram, Facebook, Link as LinkIcon, Send, MessageCircle, Heart, User, ExternalLink, Settings, Shield } from 'lucide-react';
 
 const ProfileModal = ({ isOpen, onClose, user, isCurrentUser, onOpenSettings, isBlocked, onToggleBlock }) => {
     const [viewFullPhoto, setViewFullPhoto] = useState(false);
@@ -20,12 +20,14 @@ const ProfileModal = ({ isOpen, onClose, user, isCurrentUser, onOpenSettings, is
 
     // Mock data for the profile
     const profileInfo = {
-        phone: '+1 (555) 001-2024',
-        joined: 'Joined Jan 2024',
-        location: 'California, USA',
-        bio: user.bio || `Passionate about creating amazing digital experiences. Constantly exploring new technologies and connecting with like-minded individuals. Let's build something great!`,
-        followers: '1.2k',
-        following: '840'
+        phone: user.phone || '+1 (555) 001-2024',
+        joined: user.joinedDate || 'Joined Jan 2024',
+        location: user.location || 'Unknown Location',
+        bio: user.bio || `Passionate about creating amazing digital experiences. Let's build something great!`,
+        instagram: user.instagram,
+        telegram: user.telegram,
+        link: user.link,
+        facebook: user.facebook
     };
 
     return (
@@ -59,7 +61,8 @@ const ProfileModal = ({ isOpen, onClose, user, isCurrentUser, onOpenSettings, is
                         border: '1px solid var(--border-color)',
                         display: 'flex',
                         flexDirection: 'column',
-                        position: 'relative'
+                        position: 'relative',
+                        height: '720px', // Fixed height for consistency
                     }}
                 >
                     {/* Immersive Header */}
@@ -108,7 +111,8 @@ const ProfileModal = ({ isOpen, onClose, user, isCurrentUser, onOpenSettings, is
                     </div>
 
                     {/* Profile Content */}
-                    <div style={{ padding: '0 24px 24px', marginTop: '-50px', position: 'relative', zIndex: 5 }}>
+                    <div style={{ padding: '0 24px 20px', marginTop: '-50px', position: 'relative', zIndex: 5, flex: 1, overflowY: 'auto', scrollbarWidth: 'none' }} className="profile-scroll">
+                        <style>{`.profile-scroll::-webkit-scrollbar { display: none; }`}</style>
                         {/* Status Avatar */}
                         <div
                             style={{ position: 'relative', display: 'inline-block', marginBottom: '16px', cursor: 'pointer' }}
@@ -173,7 +177,7 @@ const ProfileModal = ({ isOpen, onClose, user, isCurrentUser, onOpenSettings, is
                         </div>
 
                         {/* Name & Title */}
-                        <div style={{ marginBottom: '10px' }}>
+                        <div style={{ marginBottom: '14px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
                                 <h2 style={{ fontSize: '20px', fontWeight: '800', letterSpacing: '-0.3px' }}>
                                     {user.nickname || user.displayName || user.name}
@@ -185,23 +189,6 @@ const ProfileModal = ({ isOpen, onClose, user, isCurrentUser, onOpenSettings, is
                                 <span style={{ width: '3px', height: '3px', background: 'var(--border-color)', borderRadius: '50%' }} />
                                 {profileInfo.joined}
                             </p>
-                        </div>
-
-                        {/* Stats Row */}
-                        <div style={{
-                            display: 'flex',
-                            gap: '20px',
-                            marginBottom: '12px',
-                            padding: '4px 0'
-                        }}>
-                            <div>
-                                <span style={{ fontSize: '18px', fontWeight: '800', display: 'block' }}>{profileInfo.followers}</span>
-                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Followers</span>
-                            </div>
-                            <div>
-                                <span style={{ fontSize: '18px', fontWeight: '800', display: 'block' }}>{profileInfo.following}</span>
-                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Following</span>
-                            </div>
                         </div>
 
                         {/* Bio Section */}
@@ -230,7 +217,7 @@ const ProfileModal = ({ isOpen, onClose, user, isCurrentUser, onOpenSettings, is
                                 <span>{profileInfo.location}</span>
                             </div>
 
-                            {/* Social Icons Placeholder */}
+                            {/* Social Icons */}
                             <div style={{
                                 display: 'flex',
                                 gap: '16px',
@@ -238,9 +225,29 @@ const ProfileModal = ({ isOpen, onClose, user, isCurrentUser, onOpenSettings, is
                                 paddingTop: '16px',
                                 borderTop: '1px solid rgba(255,255,255,0.05)'
                             }}>
-                                <Instagram size={18} style={{ color: 'var(--text-secondary)', cursor: 'pointer' }} />
-                                <Twitter size={18} style={{ color: 'var(--text-secondary)', cursor: 'pointer' }} />
-                                <Github size={18} style={{ color: 'var(--text-secondary)', cursor: 'pointer' }} />
+                                {profileInfo.instagram && (
+                                    <a href={`https://instagram.com/${profileInfo.instagram}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-secondary)', transition: 'color 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.color = '#E1306C'} onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}>
+                                        <Instagram size={18} />
+                                    </a>
+                                )}
+                                {profileInfo.telegram && (
+                                    <a href={`https://t.me/${profileInfo.telegram}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-secondary)', transition: 'color 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.color = '#0088cc'} onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}>
+                                        <Send size={18} />
+                                    </a>
+                                )}
+                                {profileInfo.facebook && (
+                                    <a href={profileInfo.facebook.startsWith('http') ? profileInfo.facebook : `https://facebook.com/${profileInfo.facebook}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-secondary)', transition: 'color 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.color = '#1877F2'} onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}>
+                                        <Facebook size={18} />
+                                    </a>
+                                )}
+                                {profileInfo.link && (
+                                    <a href={profileInfo.link.startsWith('http') ? profileInfo.link : `https://${profileInfo.link}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-secondary)', transition: 'color 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.color = 'var(--accent-color)'} onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}>
+                                        <LinkIcon size={18} />
+                                    </a>
+                                )}
+                                {!profileInfo.instagram && !profileInfo.telegram && !profileInfo.facebook && !profileInfo.link && (
+                                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontStyle: 'italic' }}>No social links connected</span>
+                                )}
                             </div>
                         </div>
 

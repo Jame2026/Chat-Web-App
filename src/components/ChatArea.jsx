@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, FileText, Smile, MoreHorizontal, ArrowLeft, Trash2, User, Pencil, Check, X as CloseIcon, Mic, Play, Pause, Volume2, Clock, Shield } from 'lucide-react';
+import { Send, FileText, Smile, MoreHorizontal, ArrowLeft, Trash2, User, Users, Pencil, Check, X as CloseIcon, Mic, Play, Pause, Volume2, Clock, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import EmojiPicker from 'emoji-picker-react';
 
@@ -431,7 +431,11 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
                         color: '#fff',
                         boxShadow: '0 4px 8px rgba(0,0,0,0.15)'
                     }}>
-                        {!activeConversation?.photoURL && (activeConversation?.nickname || activeConversation?.name || '?').charAt(0).toUpperCase()}
+                        {!activeConversation?.photoURL && (
+                            activeConversation?.type === 'channel'
+                                ? <Users size={20} />
+                                : (activeConversation?.nickname || activeConversation?.name || '?').charAt(0).toUpperCase()
+                        )}
                     </div>
                     <div>
                         <div style={{ fontSize: '17px', fontWeight: '800', color: 'var(--text-primary)', letterSpacing: '-0.3px', lineHeight: '1.2' }}>
@@ -439,7 +443,10 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
                         </div>
                         <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '500' }}>
                             {(() => {
-                                if (activeConversation?.type === 'channel') return `${activeConversation.members || 0} members`;
+                                if (activeConversation?.type === 'channel') {
+                                    const count = Array.isArray(activeConversation.members) ? activeConversation.members.length : (activeConversation.members || 0);
+                                    return `${count} members`;
+                                }
 
                                 // Heartbeat verification
                                 const lastSeenDate = activeConversation?.lastSeen?.toDate ? activeConversation.lastSeen.toDate() : new Date(activeConversation?.lastSeen);

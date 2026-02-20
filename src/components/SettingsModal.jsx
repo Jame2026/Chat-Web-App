@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Moon, Sun, Camera, Check, LogOut, Settings, User as UserIcon, Type, FileText, Circle, Smile, Image as ImageIcon, ExternalLink } from 'lucide-react';
+import { X, Moon, Sun, Camera, Check, LogOut, Settings, User as UserIcon, Type, FileText, Circle, Smile, Image as ImageIcon, ExternalLink, MapPin, Instagram, Github, Facebook, Link as LinkIcon, Send } from 'lucide-react';
 import EmojiPicker from 'emoji-picker-react';
 import Cropper from 'react-easy-crop';
 import getCroppedImg from '../utils/cropImage';
@@ -22,11 +22,22 @@ const SettingsModal = ({
     status: currentStatus,
     onUpdateStatus,
     userWallpaper,
-    onUpdateWallpaper
+    onUpdateWallpaper,
+    userLocation,
+    userInstagram,
+    userTelegram,
+    userLink,
+    userFacebook,
+    onUpdateSocials
 }) => {
     // Local state for all fields
     const [newName, setNewName] = useState('');
     const [newBio, setNewBio] = useState('');
+    const [location, setLocation] = useState('');
+    const [instagram, setInstagram] = useState('');
+    const [telegram, setTelegram] = useState('');
+    const [link, setLink] = useState('');
+    const [facebook, setFacebook] = useState('');
     const [localPreview, setLocalPreview] = useState(null);
     const [pendingFile, setPendingFile] = useState(null);
     const [status, setStatus] = useState(currentStatus || 'active');
@@ -46,6 +57,11 @@ const SettingsModal = ({
         if (isOpen && user) {
             setNewName(user.displayName || '');
             setNewBio(userBio || '');
+            setLocation(userLocation || '');
+            setInstagram(userInstagram || '');
+            setTelegram(userTelegram || '');
+            setLink(userLink || '');
+            setFacebook(userFacebook || '');
             setStatus(currentStatus || 'active');
             setPendingWallpaper(userWallpaper || '');
             setLocalPreview(null);
@@ -69,6 +85,11 @@ const SettingsModal = ({
     const hasChanges =
         newName.trim() !== (user?.displayName || '') ||
         newBio.trim() !== (userBio || '') ||
+        location.trim() !== (userLocation || '') ||
+        instagram.trim() !== (userInstagram || '') ||
+        telegram.trim() !== (userTelegram || '') ||
+        link.trim() !== (userLink || '') ||
+        facebook.trim() !== (userFacebook || '') ||
         status !== (currentStatus || 'active') ||
         pendingWallpaper !== (userWallpaper || '') ||
         pendingFile !== null;
@@ -88,6 +109,17 @@ const SettingsModal = ({
             }
             if (pendingWallpaper !== (userWallpaper || '')) {
                 await onUpdateWallpaper(pendingWallpaper);
+            }
+
+            const socialsToUpdate = {};
+            if (location.trim() !== (userLocation || '')) socialsToUpdate.location = location.trim();
+            if (instagram.trim() !== (userInstagram || '')) socialsToUpdate.instagram = instagram.trim();
+            if (telegram.trim() !== (userTelegram || '')) socialsToUpdate.telegram = telegram.trim();
+            if (link.trim() !== (userLink || '')) socialsToUpdate.link = link.trim();
+            if (facebook.trim() !== (userFacebook || '')) socialsToUpdate.facebook = facebook.trim();
+
+            if (Object.keys(socialsToUpdate).length > 0) {
+                await onUpdateSocials(socialsToUpdate);
             }
             if (pendingFile) {
                 await onUpdatePhoto(pendingFile);
@@ -350,6 +382,11 @@ const SettingsModal = ({
                                         ...user,
                                         displayName: newName,
                                         bio: newBio,
+                                        location: location,
+                                        instagram: instagram,
+                                        telegram: telegram,
+                                        link: link,
+                                        facebook: facebook,
                                         photoURL: localPreview || userPhotoURL,
                                         status: status
                                     });
@@ -415,7 +452,84 @@ const SettingsModal = ({
                             </div>
                         </section>
 
-                        {/* 4. Appearance & Wallpaper */}
+                        {/* 4. Social Information */}
+                        <section style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '8px' }}>
+                                <ExternalLink size={12} /> Social Information
+                            </label>
+
+                            {/* Location */}
+                            <div style={{ position: 'relative' }}>
+                                <div style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }}>
+                                    <MapPin size={16} />
+                                </div>
+                                <input
+                                    type="text"
+                                    value={location}
+                                    onChange={(e) => setLocation(e.target.value)}
+                                    placeholder="Your Location (e.g. California, USA)"
+                                    style={{ width: '100%', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '12px 14px 12px 40px', color: 'var(--text-primary)', outline: 'none', height: '44px', fontSize: '13px' }}
+                                />
+                            </div>
+
+                            {/* Instagram */}
+                            <div style={{ position: 'relative' }}>
+                                <div style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }}>
+                                    <Instagram size={16} />
+                                </div>
+                                <input
+                                    type="text"
+                                    value={instagram}
+                                    onChange={(e) => setInstagram(e.target.value)}
+                                    placeholder="Instagram Username"
+                                    style={{ width: '100%', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '12px 14px 12px 40px', color: 'var(--text-primary)', outline: 'none', height: '44px', fontSize: '13px' }}
+                                />
+                            </div>
+
+                            {/* Telegram */}
+                            <div style={{ position: 'relative' }}>
+                                <div style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }}>
+                                    <Send size={16} />
+                                </div>
+                                <input
+                                    type="text"
+                                    value={telegram}
+                                    onChange={(e) => setTelegram(e.target.value)}
+                                    placeholder="Telegram Username"
+                                    style={{ width: '100%', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '12px 14px 12px 40px', color: 'var(--text-primary)', outline: 'none', height: '44px', fontSize: '13px' }}
+                                />
+                            </div>
+
+                            {/* Link */}
+                            <div style={{ position: 'relative' }}>
+                                <div style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }}>
+                                    <LinkIcon size={16} />
+                                </div>
+                                <input
+                                    type="text"
+                                    value={link}
+                                    onChange={(e) => setLink(e.target.value)}
+                                    placeholder="Personal Link (Portfolio, etc.)"
+                                    style={{ width: '100%', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '12px 14px 12px 40px', color: 'var(--text-primary)', outline: 'none', height: '44px', fontSize: '13px' }}
+                                />
+                            </div>
+
+                            {/* Facebook */}
+                            <div style={{ position: 'relative' }}>
+                                <div style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }}>
+                                    <Facebook size={16} />
+                                </div>
+                                <input
+                                    type="text"
+                                    value={facebook}
+                                    onChange={(e) => setFacebook(e.target.value)}
+                                    placeholder="Facebook Profile Link"
+                                    style={{ width: '100%', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '12px 14px 12px 40px', color: 'var(--text-primary)', outline: 'none', height: '44px', fontSize: '13px' }}
+                                />
+                            </div>
+                        </section>
+
+                        {/* 5. Appearance & Wallpaper */}
                         <section style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div>
