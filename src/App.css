@@ -1,0 +1,149 @@
+/* Global CSS Reset & Variables (already present in index.css, just adding layout specifics here if needed) */
+
+.app-container {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.loading-screen {
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.sidebar-container {
+  width: 300px;
+  background-color: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  flex-shrink: 0;
+  transition: transform 0.3s ease-in-out;
+}
+
+.chat-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--bg-primary);
+  min-width: 0;
+}
+
+.back-button {
+  display: none;
+  /* Hidden on desktop */
+}
+
+/* Mobile Responsive Styles */
+@media (max-width: 768px) {
+  .sidebar-container {
+    width: 100%;
+    position: absolute;
+    z-index: 20;
+    top: 0;
+    left: 0;
+  }
+
+  /* When sidebar is hidden (chat is active), move it off-screen or hide it */
+  .sidebar-container.hidden {
+    transform: translateX(-100%);
+    pointer-events: none;
+    /* Prevent clicks when hidden */
+  }
+
+  .chat-container {
+    width: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 10;
+  }
+
+  /* When chat is visible, it takes over */
+  .chat-container.active {
+    z-index: 30;
+    /* Higher than sidebar if needed, or sidebar moves away */
+  }
+
+  /* Actually, simpler approach for mobile: 
+     - If viewing list: Show Sidebar, Hide Chat
+     - If viewing chat: Hide Sidebar, Show Chat
+  */
+
+  .app-container.view-sidebar .sidebar-container {
+    display: flex;
+    width: 100%;
+    transform: translateX(0);
+  }
+
+  .app-container.view-sidebar .chat-container {
+    display: none;
+  }
+
+  .app-container.view-chat .sidebar-container {
+    display: none;
+  }
+
+  .app-container.view-chat .chat-container {
+    display: flex;
+    width: 100%;
+  }
+
+  .back-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    background: none;
+    border: none;
+    color: var(--accent-color);
+    cursor: pointer;
+  }
+}
+
+/* Premium Message Effects */
+.premium-bubble {
+  position: relative;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.premium-bubble:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Cleanup unused animations */
+@keyframes shimmer {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+.chat-area-background {
+  display: none;
+}
+
+.premium-bubble>* {
+  position: relative;
+  z-index: 2;
+}
+
+.menu-item:hover {
+  background-color: var(--bg-tertiary) !important;
+}
