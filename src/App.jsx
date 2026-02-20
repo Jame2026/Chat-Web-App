@@ -771,6 +771,7 @@ function App() {
       />
 
       <UserSettingsModal
+        key={isUserSettingsOpen ? `user-settings-${currentConversation?.id}` : 'user-settings-closed'}
         isOpen={isUserSettingsOpen}
         onClose={() => setIsUserSettingsOpen(false)}
         user={currentConversation?.type === 'user' ? currentConversation : null}

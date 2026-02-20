@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Phone, Calendar, MapPin, Instagram, Twitter, Github, MessageCircle, Heart, User, ExternalLink, Settings, Shield } from 'lucide-react';
 
-const ProfileModal = ({ isOpen, onClose, user, theme, isCurrentUser, onOpenSettings, isBlocked, onToggleBlock }) => {
+const ProfileModal = ({ isOpen, onClose, user, isCurrentUser, onOpenSettings, isBlocked, onToggleBlock }) => {
     const [viewFullPhoto, setViewFullPhoto] = useState(false);
 
     if (!isOpen || !user) return null;

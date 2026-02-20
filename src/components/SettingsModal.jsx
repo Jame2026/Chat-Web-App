@@ -25,8 +25,6 @@ const SettingsModal = ({
     onUpdateWallpaper
 }) => {
     // Local state for all fields
-    const [isEditingName, setIsEditingName] = useState(false);
-    const [isEditingBio, setIsEditingBio] = useState(false);
     const [newName, setNewName] = useState('');
     const [newBio, setNewBio] = useState('');
     const [localPreview, setLocalPreview] = useState(null);
@@ -35,7 +33,6 @@ const SettingsModal = ({
     const [pendingWallpaper, setPendingWallpaper] = useState(userWallpaper || '');
     const [showEmojiPicker, setShowEmojiPicker] = useState(null);
     const [isSavingAll, setIsSavingAll] = useState(false);
-    const [uploadSuccess, setUploadSuccess] = useState(false);
     const [crop, setCrop] = useState({ x: 0, y: 0 });
     const [zoom, setZoom] = useState(1);
     const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
@@ -51,11 +48,8 @@ const SettingsModal = ({
             setNewBio(userBio || '');
             setStatus(currentStatus || 'active');
             setPendingWallpaper(userWallpaper || '');
-            setIsEditingName(false);
-            setIsEditingBio(false);
             setLocalPreview(null);
             setPendingFile(null);
-            setUploadSuccess(false);
             setIsSavingAll(false);
             setCroppingImage(null);
         }
@@ -98,7 +92,6 @@ const SettingsModal = ({
             if (pendingFile) {
                 await onUpdatePhoto(pendingFile);
             }
-            setUploadSuccess(true);
             setTimeout(() => {
                 onClose();
             }, 800);
@@ -118,7 +111,6 @@ const SettingsModal = ({
             reader.onload = () => {
                 setCroppingImage(reader.result);
             };
-            setUploadSuccess(false);
         }
         // Reset input value so the same file can be selected again if needed
         if (fileInputRef.current) {

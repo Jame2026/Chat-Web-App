@@ -5,19 +5,11 @@ import { X, Palette, Type, Check, Shield, Trash2, Heart, User, Smile, Image as I
 import EmojiPicker from 'emoji-picker-react';
 
 const UserSettingsModal = ({ isOpen, onClose, user, onUpdateSettings, theme, isBlocked, onToggleBlock, onDeleteUser }) => {
-    const [nickname, setNickname] = useState('');
-    const [selectedColor, setSelectedColor] = useState('');
-    const [selectedWallpaper, setSelectedWallpaper] = useState('');
+    const [nickname, setNickname] = useState(user?.nickname || '');
+    const [selectedColor, setSelectedColor] = useState(user?.themeColor || 'var(--accent-color)');
+    const [selectedWallpaper, setSelectedWallpaper] = useState(user?.wallpaper || '');
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const emojiPickerRef = useRef(null);
-
-    useEffect(() => {
-        if (user) {
-            setNickname(user.nickname || '');
-            setSelectedColor(user.themeColor || 'var(--accent-color)');
-            setSelectedWallpaper(user.wallpaper || '');
-        }
-    }, [user, isOpen]);
 
     // Close emoji picker when clicking outside
     useEffect(() => {

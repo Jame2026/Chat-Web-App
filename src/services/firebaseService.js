@@ -6,7 +6,6 @@ import {
     where,
     onSnapshot,
     serverTimestamp,
-    enableIndexedDbPersistence,
     updateDoc,
     setDoc,
     doc,

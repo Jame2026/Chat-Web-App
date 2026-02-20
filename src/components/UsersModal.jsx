@@ -3,7 +3,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Search, User as UserIcon, MessageSquare } from 'lucide-react';
 
-const UsersModal = ({ isOpen, onClose, users, onSelectUser, currentUser, theme }) => {
+const UsersModal = ({ isOpen, onClose, users, onSelectUser, currentUser }) => {
     const [search, setSearch] = React.useState('');
 
     if (!isOpen) return null;

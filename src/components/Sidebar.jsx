@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Search, Plus, Hash, User, Users, Settings as SettingsIcon } from 'lucide-react';
 
-const Sidebar = ({ channels, users, activeChannel, activeUser, onSelectChannel, onSelectUser, onOpenSettings, onOpenProfile, blockedUsers, onToggleBlock, userSettings, userName, userPhotoURL, user, userStatus, onOpenDirectory }) => {
+const Sidebar = ({ channels, users, activeUser, onSelectUser, onOpenSettings, onOpenProfile, blockedUsers, userSettings, userName, userPhotoURL, userStatus, onOpenDirectory }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [hoveredUserId, setHoveredUserId] = useState(null);
 

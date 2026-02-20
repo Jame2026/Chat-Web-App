@@ -1,10 +1,10 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, FileText, Smile, MoreHorizontal, ArrowLeft, Trash2, User, Heart, Pencil, Check, X as CloseIcon, Mic, Square, Play, Pause, Volume2, Clock, Shield } from 'lucide-react';
+import { Send, FileText, Smile, MoreHorizontal, ArrowLeft, Trash2, User, Pencil, Check, X as CloseIcon, Mic, Play, Pause, Volume2, Clock, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import EmojiPicker from 'emoji-picker-react';
 
-const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, isBlocked, isBlockedByThem, onToggleBlock, onOpenUserSettings, themeColor, wallpaper, onDeleteMessage, onReaction, onEditMessage, onClearChat, onViewProfile, currentUserId }) => {
+const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, isBlocked, isBlockedByThem, onToggleBlock, onOpenUserSettings, themeColor, wallpaper, onReaction, onEditMessage, onClearChat, onViewProfile, currentUserId }) => {
     const [inputValue, setInputValue] = useState('');
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [showMoreMenu, setShowMoreMenu] = useState(false);
@@ -43,7 +43,7 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
             if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
             if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
             return date.toLocaleDateString();
-        } catch (e) {
+        } catch {
             return 'Recently';
         }
     };
