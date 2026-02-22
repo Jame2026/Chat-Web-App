@@ -17,7 +17,7 @@ import { auth, db, storage } from './firebase';
 import { onAuthStateChanged, updateProfile } from 'firebase/auth';
 import { doc, onSnapshot, setDoc, updateDoc, writeBatch, collection, getDocs, query, where, serverTimestamp, addDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, uploadBytesResumable, deleteObject } from 'firebase/storage';
-import { sendMessage, subscribeToMessages, subscribeToUsers, toggleReaction, editMessage, setSharedTheme, subscribeToSharedTheme, subscribeToAllMessages, markAsSeen, toggleBlockUser, kickUserFromGroup, leaveGroup, updateGroupMetadata, deleteMessage } from './services/firebaseService';
+import { sendMessage, subscribeToMessages, subscribeToUsers, toggleReaction, editMessage, setSharedTheme, subscribeToSharedTheme, subscribeToAllMessages, markAsSeen, toggleBlockUser, kickUserFromGroup, addMemberToGroup, leaveGroup, updateGroupMetadata, deleteMessage } from './services/firebaseService';
 import { Bell } from 'lucide-react';
 import { useRef, useMemo } from 'react';
 
@@ -242,12 +242,15 @@ function App() {
 
     triggerMarkAsSeen(); // Call immediately on change
 
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') triggerMarkAsSeen();
-    };
+    const handleVisibilityChange = () => triggerMarkAsSeen();
+    const handleClick = () => triggerMarkAsSeen();
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener('mousedown', handleClick);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener('mousedown', handleClick);
+    };
   }, [activeChannel, activeUser, currentUser]);
 
   useEffect(() => {
@@ -376,6 +379,16 @@ function App() {
     } catch (error) {
       console.error("Error kicking user:", error);
       alert("Failed to kick user.");
+    }
+  };
+
+  const handleAddMember = async (userId) => {
+    if (!activeChannel) return;
+    try {
+      await addMemberToGroup(activeChannel, userId);
+    } catch (error) {
+      console.error("Error adding member:", error);
+      alert("Failed to add member.");
     }
   };
 
@@ -877,13 +890,26 @@ function App() {
             const nickname = userSettings[m.senderId]?.nickname;
             const senderName = isMe ? 'me' : (nickname || m.senderName || senderUser?.displayName || 'User');
 
+            // Map seenBy IDs to user objects for the UI
+            let seenByUserObjects = (m.seenBy || [])
+              .filter(uid => uid !== m.senderId) // Only show others who seen it
+              .map(uid => usersMap[uid] || { uid, name: 'User', displayName: 'User', photoURL: null });
+
+            // Fallback for 1-on-1: If status is seen but array is empty, show the recipient's portrait
+            if (activeUser && m.status === 'seen' && seenByUserObjects.length === 0) {
+              const otherUser = usersMap[activeUser];
+              if (otherUser) seenByUserObjects = [otherUser];
+            }
+
             return {
               ...m,
               senderName,
               sender: senderName,
               senderThemeColor: userSettings[m.senderId]?.themeColor || m.senderThemeColor || senderUser?.themeColor,
               senderPhotoURL: isMe ? userPhotoURL : (m.senderPhotoURL || senderUser?.photoURL),
-              hasReactedLove: m.reactions?.['❤️']?.includes(currentUser.uid)
+              hasReactedLove: m.reactions?.['❤️']?.includes(currentUser.uid),
+              seenByUsers: seenByUserObjects,
+              isSeen: m.status === 'seen' || seenByUserObjects.length > 0
             };
           })}
           onSendMessage={handleSendMessage}
@@ -978,6 +1004,7 @@ function App() {
         users={users}
         currentUser={currentUser}
         onKickUser={handleKickUser}
+        onAddMember={handleAddMember}
         onLeaveGroup={handleLeaveGroup}
         onUpdateGroup={handleUpdateGroup}
         initialTab={groupMembersTab}

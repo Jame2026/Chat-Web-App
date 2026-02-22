@@ -32,6 +32,10 @@ const ImageEditorModal = ({ isOpen, image, onCancel, onSave, aspect = 1, shape =
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
+                onClick={(e) => {
+                    e.stopPropagation();
+                    if (e.target === e.currentTarget) onCancel();
+                }}
                 style={{
                     position: 'fixed',
                     top: 0,
@@ -154,7 +158,12 @@ const ImageEditorModal = ({ isOpen, image, onCancel, onSave, aspect = 1, shape =
                                 max={3}
                                 step={0.01}
                                 value={zoom}
-                                onChange={(e) => setZoom(parseFloat(e.target.value))}
+                                onMouseDown={(e) => e.stopPropagation()}
+                                onClick={(e) => e.stopPropagation()}
+                                onChange={(e) => {
+                                    e.stopPropagation();
+                                    setZoom(parseFloat(e.target.value));
+                                }}
                                 style={{
                                     width: '100%',
                                     height: '6px',

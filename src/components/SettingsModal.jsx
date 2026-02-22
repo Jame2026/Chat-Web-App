@@ -244,14 +244,14 @@ const SettingsModal = ({
                     <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '32px', overflowY: 'auto' }}>
 
                         {/* 1. Photo Section */}
-                        <section style={{ textAlign: 'center' }}>
+                        <section style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
                             <div style={{ position: 'relative', display: 'inline-block' }}>
                                 <div
                                     onClick={() => fileInputRef.current.click()}
                                     style={{
-                                        width: '90px',
-                                        height: '90px',
-                                        borderRadius: '28px',
+                                        width: '100px',
+                                        height: '100px',
+                                        borderRadius: '32px',
                                         backgroundImage: localPreview ? `url("${localPreview}")` : (userPhotoURL ? `url("${userPhotoURL}")` : 'none'),
                                         backgroundColor: 'var(--accent-color)',
                                         backgroundSize: 'cover',
@@ -259,13 +259,15 @@ const SettingsModal = ({
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        fontSize: '44px',
+                                        fontSize: '48px',
                                         fontWeight: '900',
                                         color: 'white',
                                         cursor: 'pointer',
-                                        border: '4px solid var(--bg-tertiary)',
+                                        border: `4px solid ${pendingFile ? 'var(--accent-color)' : 'var(--bg-tertiary)'}`,
                                         overflow: 'hidden',
-                                        position: 'relative'
+                                        position: 'relative',
+                                        boxShadow: pendingFile ? '0 0 20px rgba(var(--accent-color-rgb), 0.4)' : 'none',
+                                        transition: 'all 0.3s ease'
                                     }}
                                 >
                                     {!localPreview && !userPhotoURL && (user?.displayName || 'U').charAt(0).toUpperCase()}
@@ -273,51 +275,67 @@ const SettingsModal = ({
                                         position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
                                         background: 'rgba(0,0,0,0.7)', display: 'flex', flexDirection: 'column',
                                         alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'all 0.3s ease', gap: '10px',
-                                        backdropFilter: 'blur(4px)'
+                                        backdropFilter: 'blur(4px)', pointerEvents: 'none'
                                     }}>
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                onOpenProfile({
-                                                    ...user,
-                                                    displayName: newName,
-                                                    bio: newBio,
-                                                    photoURL: localPreview || userPhotoURL,
-                                                    status: status
-                                                });
-                                            }}
-                                            style={{
-                                                background: 'white', border: 'none', color: 'black', padding: '6px 14px',
-                                                borderRadius: '20px', fontSize: '11px', fontWeight: '800', cursor: 'pointer',
-                                                display: 'flex', alignItems: 'center', gap: '6px', width: '80px', justifyContent: 'center'
-                                            }}
-                                        >
-                                            <UserIcon size={14} /> VIEW
-                                        </button>
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                fileInputRef.current.click();
-                                            }}
-                                            style={{
-                                                background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.4)',
-                                                color: 'white', padding: '6px 14px', borderRadius: '20px', fontSize: '11px',
-                                                fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center',
-                                                gap: '6px', width: '80px', justifyContent: 'center'
-                                            }}
-                                        >
-                                            <Camera size={14} /> CHANGE
-                                        </button>
+                                        <Camera size={24} color="white" />
                                     </div>
                                 </div>
                                 <div style={{
-                                    position: 'absolute', bottom: '5px', right: '5px', width: '22px', height: '22px',
+                                    position: 'absolute', bottom: '2px', right: '2px', width: '24px', height: '24px',
                                     borderRadius: '50%', backgroundColor: statusOptions.find(o => o.id === status)?.color,
-                                    border: '3px solid var(--bg-secondary)'
+                                    border: '4px solid var(--bg-secondary)',
+                                    zIndex: 2
                                 }} />
                                 <input type="file" ref={fileInputRef} onChange={handleFileChange} style={{ display: 'none' }} accept="image/*" />
                             </div>
-                            <style>{`.photo-overlay:hover { opacity: 1 !important; }`}</style>
+
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <button
+                                    onClick={() => fileInputRef.current.click()}
+                                    style={{
+                                        background: 'var(--bg-tertiary)',
+                                        border: '1px solid var(--border-color)',
+                                        color: 'var(--text-primary)',
+                                        padding: '8px 16px',
+                                        borderRadius: '12px',
+                                        fontSize: '12px',
+                                        fontWeight: '700',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '8px',
+                                        transition: 'all 0.2s'
+                                    }}
+                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-primary)'}
+                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'}
+                                >
+                                    <Camera size={14} /> {userPhotoURL ? 'Change Photo' : 'Upload Photo'}
+                                </button>
+                                {userPhotoURL && (
+                                    <button
+                                        onClick={() => onOpenProfile({ ...user, photoURL: userPhotoURL })}
+                                        style={{
+                                            background: 'transparent',
+                                            border: '1px solid var(--border-color)',
+                                            color: 'var(--text-secondary)',
+                                            padding: '8px 16px',
+                                            borderRadius: '12px',
+                                            fontSize: '12px',
+                                            fontWeight: '700',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s'
+                                        }}
+                                        onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-primary)'}
+                                        onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
+                                    >
+                                        View
+                                    </button>
+                                )}
+                            </div>
+                            <style>{`
+                                .photo-overlay { pointer-events: none; }
+                                [onClick]:hover .photo-overlay { opacity: 1 !important; }
+                            `}</style>
                         </section>
 
                         {/* 2. Name & Bio */}

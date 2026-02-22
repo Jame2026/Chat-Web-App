@@ -12,6 +12,7 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
     const messagesEndRef = useRef(null);
     const emojiPickerRef = useRef(null);
     const moreMenuRef = useRef(null);
+    const scheduleButtonRef = useRef(null);
     const [hoveredMessageId, setHoveredMessageId] = useState(null);
     const [editingMessageId, setEditingMessageId] = useState(null);
     const [editValue, setEditValue] = useState('');
@@ -31,6 +32,8 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
     const [currentTime, setCurrentTime] = useState(Date.now());
     const [imageForEditing, setImageForEditing] = useState(null);
     const [isImageEditorOpen, setIsImageEditorOpen] = useState(false);
+
+
 
 
     const formatRelativeTime = (timestamp) => {
@@ -693,6 +696,34 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
                                             <Settings size={16} />
                                             Group Settings
                                         </button>
+
+                                        {activeConversation.createdBy === currentUserId && (
+                                            <button
+                                                onClick={() => {
+                                                    onClearChat();
+                                                    setShowMoreMenu(false);
+                                                }}
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '8px 12px',
+                                                    textAlign: 'left',
+                                                    backgroundColor: 'transparent',
+                                                    border: 'none',
+                                                    color: '#ff4444',
+                                                    cursor: 'pointer',
+                                                    borderRadius: '6px',
+                                                    fontSize: '14px',
+                                                    fontWeight: '500',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '8px'
+                                                }}
+                                                className="menu-item"
+                                            >
+                                                <Trash2 size={16} />
+                                                Clear Messages
+                                            </button>
+                                        )}
                                     </>
                                 )}
                             </motion.div>
@@ -909,55 +940,151 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
                                                             </div>
                                                         </div>
                                                     ) : (
-                                                        <div style={{ fontSize: `${activeConversation?.messageSize || 14}px`, lineHeight: '1.4' }}>
-                                                            {msg.text}
-                                                            {msg.edited && (
-                                                                <span style={{
-                                                                    fontSize: '10px',
-                                                                    opacity: 0.6,
-                                                                    marginLeft: '6px',
-                                                                    fontStyle: 'italic',
-                                                                    display: 'inline-block',
-                                                                    verticalAlign: 'middle'
-                                                                }}>(edited)</span>
+                                                        <>
+                                                            {msg.text && (
+                                                                <div style={{ fontSize: `${activeConversation?.messageSize || 14}px`, lineHeight: '1.4' }}>
+                                                                    {msg.text}
+                                                                    {msg.edited && (
+                                                                        <span style={{
+                                                                            fontSize: '10px',
+                                                                            opacity: 0.6,
+                                                                            marginLeft: '6px',
+                                                                            fontStyle: 'italic',
+                                                                            display: 'inline-block',
+                                                                            verticalAlign: 'middle'
+                                                                        }}>(edited)</span>
+                                                                    )}
+                                                                </div>
                                                             )}
-                                                        </div>
-                                                    )}
-                                                    {/* Reactions Display */}
-                                                    {msg.reactions && Object.keys(msg.reactions).some(emoji => msg.reactions[emoji].length > 0) && (
-                                                        <div style={{
-                                                            position: 'absolute',
-                                                            bottom: '-12px',
-                                                            [isMe ? 'right' : 'left']: '4px',
-                                                            display: 'flex',
-                                                            gap: '2px',
-                                                            zIndex: 2
-                                                        }}>
-                                                            {Object.entries(msg.reactions).map(([emoji, users]) => users.length > 0 && (
-                                                                <motion.div
-                                                                    key={emoji}
-                                                                    initial={{ scale: 0 }}
-                                                                    animate={{ scale: 1 }}
-                                                                    style={{
-                                                                        backgroundColor: 'var(--bg-secondary)',
-                                                                        border: '1px solid var(--border-color)',
-                                                                        borderRadius: '10px',
-                                                                        padding: '1px 4px',
-                                                                        fontSize: '10px',
-                                                                        display: 'flex',
-                                                                        alignItems: 'center',
-                                                                        gap: '2px',
-                                                                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                                                                        cursor: 'default'
-                                                                    }}
-                                                                >
-                                                                    <span>{emoji}</span>
-                                                                    {users.length > 1 && <span style={{ color: 'var(--text-secondary)', fontWeight: 'bold' }}>{users.length}</span>}
-                                                                </motion.div>
-                                                            ))}
-                                                        </div>
+
+                                                            {/* Message Time & Status */}
+                                                            <div style={{
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'flex-end',
+                                                                gap: '4px',
+                                                                marginTop: '4px',
+                                                                fontSize: '10px',
+                                                                opacity: 0.7,
+                                                                color: isMe ? '#fff' : 'var(--text-secondary)',
+                                                                userSelect: 'none'
+                                                            }}>
+                                                                {msg.createdAt ? (msg.createdAt.toDate ? msg.createdAt.toDate() : new Date(msg.createdAt)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '...'}
+                                                                {isMe && (
+                                                                    <div title={msg.isSeen
+                                                                        ? (msg.seenByUsers?.length > 0
+                                                                            ? `Seen by ${msg.seenByUsers.map(u => u.displayName || u.name || 'User').join(', ')}`
+                                                                            : 'Seen')
+                                                                        : 'Sent'}>
+                                                                        {msg.isSeen ? (
+                                                                            <div style={{ display: 'flex' }}>
+                                                                                <Check size={12} color="#4ade80" />
+                                                                                <Check size={12} color="#4ade80" style={{ marginLeft: '-8px' }} />
+                                                                            </div>
+                                                                        ) : (
+                                                                            <Check size={12} />
+                                                                        )}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+
+                                                            {/* Seen Portraits Overlapping Bubble */}
+                                                            {isMe && (msg.seenByUsers && msg.seenByUsers.length > 0 || (activeConversation.type === 'private' && msg.isSeen)) && (
+                                                                <div style={{
+                                                                    position: 'absolute',
+                                                                    bottom: '-10px',
+                                                                    right: '0',
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'flex-end',
+                                                                    gap: '0',
+                                                                    zIndex: 10
+                                                                }}>
+                                                                    {(msg.seenByUsers && msg.seenByUsers.length > 0 ? msg.seenByUsers : [{ uid: 'fallback', photoURL: null, displayName: 'Other', themeColor: 'var(--accent-color)' }]).slice(0, 5).map((u, idx) => (
+                                                                        <motion.div
+                                                                            key={u.uid || idx}
+                                                                            initial={{ opacity: 0, scale: 0.5 }}
+                                                                            animate={{ opacity: 1, scale: 1 }}
+                                                                            whileHover={{ scale: 1.2, zIndex: 20 }}
+                                                                            title={`Seen by ${u.displayName || u.name || 'Unknown User'}`}
+                                                                            style={{
+                                                                                width: '18px',
+                                                                                height: '18px',
+                                                                                borderRadius: '50%',
+                                                                                backgroundImage: (u.photoURL) ? `url("${u.photoURL}")` : 'none',
+                                                                                backgroundColor: u.themeColor || 'var(--accent-color)',
+                                                                                backgroundSize: 'cover',
+                                                                                backgroundPosition: 'center',
+                                                                                display: 'flex',
+                                                                                alignItems: 'center',
+                                                                                justifyContent: 'center',
+                                                                                fontSize: '9px',
+                                                                                fontWeight: '800',
+                                                                                color: 'white',
+                                                                                boxShadow: '0 2px 4px rgba(0,0,0,0.4)',
+                                                                                border: '2px solid var(--bg-primary)',
+                                                                                marginLeft: idx > 0 ? '-6px' : '0', // Overlap
+                                                                                cursor: 'help',
+                                                                                zIndex: 10 - idx
+                                                                            }}
+                                                                        >
+                                                                            {!u.photoURL && (u.displayName || u.name || '?').charAt(0).toUpperCase()}
+                                                                        </motion.div>
+                                                                    ))}
+                                                                    {msg.seenByUsers && msg.seenByUsers.length > 5 && (
+                                                                        <div style={{
+                                                                            fontSize: '9px',
+                                                                            color: 'white',
+                                                                            backgroundColor: 'rgba(0,0,0,0.6)',
+                                                                            borderRadius: '10px',
+                                                                            padding: '1px 4px',
+                                                                            marginLeft: '2px',
+                                                                            fontWeight: 'bold',
+                                                                            backdropFilter: 'blur(2px)'
+                                                                        }}>
+                                                                            +{msg.seenByUsers.length - 5}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        </>
                                                     )}
                                                 </div>
+
+                                                {/* Reactions Display */}
+                                                {msg.reactions && Object.keys(msg.reactions).some(emoji => msg.reactions[emoji].length > 0) && (
+                                                    <div style={{
+                                                        position: 'absolute',
+                                                        bottom: '-12px',
+                                                        [isMe ? 'right' : 'left']: '4px',
+                                                        display: 'flex',
+                                                        gap: '2px',
+                                                        zIndex: 2
+                                                    }}>
+                                                        {Object.entries(msg.reactions).map(([emoji, users]) => users.length > 0 && (
+                                                            <motion.div
+                                                                key={emoji}
+                                                                initial={{ scale: 0 }}
+                                                                animate={{ scale: 1 }}
+                                                                style={{
+                                                                    backgroundColor: 'var(--bg-secondary)',
+                                                                    border: '1px solid var(--border-color)',
+                                                                    borderRadius: '10px',
+                                                                    padding: '1px 4px',
+                                                                    fontSize: '10px',
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    gap: '2px',
+                                                                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                                                                    cursor: 'default'
+                                                                }}
+                                                            >
+                                                                <span>{emoji}</span>
+                                                                {users.length > 1 && <span style={{ color: 'var(--text-secondary)', fontWeight: 'bold' }}>{users.length}</span>}
+                                                            </motion.div>
+                                                        ))}
+                                                    </div>
+                                                )}
                                             </div>
 
                                             {/* Action Buttons (Pencil/Reactions) */}
@@ -1077,38 +1204,6 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
                                                     )}
                                                 </div>
                                             )}
-                                            {isMe && msg.id === lastMyMessageId && isThreadLastMessageMine && msg.status === 'seen' && (
-                                                <motion.div
-                                                    initial={{ opacity: 0, scale: 0.5 }}
-                                                    animate={{ opacity: 1, scale: 1 }}
-                                                    style={{
-                                                        alignSelf: 'flex-end',
-                                                        marginRight: '4px',
-                                                        marginTop: '2px'
-                                                    }}
-                                                    title={`Seen by ${activeConversation?.nickname || activeConversation?.name}`}
-                                                >
-                                                    <div style={{
-                                                        width: '16px',
-                                                        height: '16px',
-                                                        borderRadius: '50%',
-                                                        backgroundImage: activeConversation?.photoURL ? `url("${activeConversation.photoURL}")` : 'none',
-                                                        backgroundColor: activeConversation?.themeColor || 'var(--accent-color)',
-                                                        backgroundSize: 'cover',
-                                                        backgroundPosition: 'center',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        fontSize: '8px',
-                                                        fontWeight: '800',
-                                                        color: 'white',
-                                                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                                                        border: '1px solid var(--bg-primary)'
-                                                    }}>
-                                                        {!activeConversation?.photoURL && (activeConversation?.nickname || activeConversation?.name || '?').charAt(0).toUpperCase()}
-                                                    </div>
-                                                </motion.div>
-                                            )}
                                         </div>
                                     </motion.div>
                                 );
@@ -1119,7 +1214,7 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
                 </div>
 
                 {/* Sending Overlay */}
-                <AnimatePresence>
+                < AnimatePresence >
                     {isUploading && (
                         <motion.div
                             initial={{ opacity: 0, scale: 0.9, y: 10 }}
@@ -1158,7 +1253,7 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
             </div>
 
             {/* Emoji Picker Popover */}
-            <AnimatePresence>
+            < AnimatePresence >
                 {showEmojiPicker && (
                     <motion.div
                         ref={emojiPickerRef}
@@ -1186,7 +1281,7 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
             </AnimatePresence>
 
             {/* Schedule Picker Popover */}
-            <AnimatePresence>
+            < AnimatePresence >
                 {showSchedule && (
                     <motion.div
                         ref={scheduleButtonRef}
@@ -1324,229 +1419,230 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
             </AnimatePresence>
 
             {/* Input and Blocked Overlay */}
-            <div style={{ padding: '12px 24px 24px', backgroundColor: 'var(--bg-primary)', position: 'relative' }}>
-                {isBlocked ? (
-                    <div style={{
-                        backgroundColor: 'var(--bg-tertiary)',
-                        borderRadius: '12px',
-                        padding: '16px',
-                        textAlign: 'center',
-                        color: 'var(--text-secondary)',
-                        fontSize: '14px',
-                        border: '1px solid var(--border-color)'
-                    }}>
-                        You have blocked this user. <button onClick={onToggleBlock} style={{ background: 'none', border: 'none', color: 'var(--accent-color)', cursor: 'pointer', fontWeight: 'bold' }}>Unblock</button> to send messages.
-                    </div>
-                ) : isBlockedByThem ? (
-                    <div style={{
-                        backgroundColor: 'var(--bg-tertiary)',
-                        borderRadius: '12px',
-                        padding: '16px',
-                        textAlign: 'center',
-                        color: 'var(--text-secondary)',
-                        fontSize: '14px',
-                        border: '1px solid var(--border-color)'
-                    }}>
-                        This user has blocked you. You cannot send messages to them.
-                    </div>
-                ) : (
-                    <div style={{
-                        position: 'relative',
-                        backgroundColor: 'var(--bg-tertiary)',
-                        borderRadius: '24px',
-                        padding: '2px 10px',
-                        display: 'flex',
-                        alignItems: 'center'
-                    }}>
-                        {isRecording ? (
-                            <div style={{
-                                flex: 1,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                padding: '8px 12px',
-                                background: 'rgba(239, 68, 68, 0.1)',
-                                borderRadius: '24px',
-                                border: '1px solid rgba(239, 68, 68, 0.2)'
-                            }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ef4444' }}>
-                                    <motion.div
-                                        animate={{ opacity: [1, 0.4, 1] }}
-                                        transition={{ repeat: Infinity, duration: 1.5 }}
-                                        style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#ef4444' }}
-                                    />
-                                    <span style={{ fontWeight: '600', fontSize: '13px' }}>Recording... {formatTime(recordingTime)}</span>
-                                </div>
+            < div style={{ padding: '12px 24px 24px', backgroundColor: 'var(--bg-primary)', position: 'relative' }}>
+                {
+                    isBlocked ? (
+                        <div style={{
+                            backgroundColor: 'var(--bg-tertiary)',
+                            borderRadius: '12px',
+                            padding: '16px',
+                            textAlign: 'center',
+                            color: 'var(--text-secondary)',
+                            fontSize: '14px',
+                            border: '1px solid var(--border-color)'
+                        }} >
+                            You have blocked this user. < button onClick={onToggleBlock} style={{ background: 'none', border: 'none', color: 'var(--accent-color)', cursor: 'pointer', fontWeight: 'bold' }}> Unblock</button > to send messages.
+                        </div>
+                    ) : isBlockedByThem ? (
+                        <div style={{
+                            backgroundColor: 'var(--bg-tertiary)',
+                            borderRadius: '12px',
+                            padding: '16px',
+                            textAlign: 'center',
+                            color: 'var(--text-secondary)',
+                            fontSize: '14px',
+                            border: '1px solid var(--border-color)'
+                        }}>
+                            This user has blocked you. You cannot send messages to them.
+                        </div>
+                    ) : (
+                        <div style={{
+                            position: 'relative',
+                            backgroundColor: 'var(--bg-tertiary)',
+                            borderRadius: '24px',
+                            padding: '2px 10px',
+                            display: 'flex',
+                            alignItems: 'center'
+                        }}>
+                            {isRecording ? (
+                                <div style={{
+                                    flex: 1,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    padding: '8px 12px',
+                                    background: 'rgba(239, 68, 68, 0.1)',
+                                    borderRadius: '24px',
+                                    border: '1px solid rgba(239, 68, 68, 0.2)'
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ef4444' }}>
+                                        <motion.div
+                                            animate={{ opacity: [1, 0.4, 1] }}
+                                            transition={{ repeat: Infinity, duration: 1.5 }}
+                                            style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#ef4444' }}
+                                        />
+                                        <span style={{ fontWeight: '600', fontSize: '13px' }}>Recording... {formatTime(recordingTime)}</span>
+                                    </div>
 
-                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                        <button
+                                            onClick={cancelRecording}
+                                            disabled={isUploading}
+                                            title="Cancel Recording"
+                                            style={{
+                                                background: 'rgba(255, 255, 255, 0.1)',
+                                                border: '1px solid rgba(255, 255, 255, 0.2)',
+                                                color: '#ef4444',
+                                                padding: '8px',
+                                                borderRadius: '50%',
+                                                cursor: isUploading ? 'default' : 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                transition: 'all 0.2s'
+                                            }}
+                                        >
+                                            <Trash2 size={18} />
+                                        </button>
+                                        <button
+                                            onClick={stopRecording}
+                                            disabled={isUploading}
+                                            title="Send Voice Message"
+                                            style={{
+                                                background: isUploading ? 'var(--text-secondary)' : '#ef4444',
+                                                border: 'none',
+                                                color: 'white',
+                                                padding: '8px',
+                                                borderRadius: '50%',
+                                                cursor: isUploading ? 'default' : 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                boxShadow: '0 2px 8px rgba(239, 68, 68, 0.4)'
+                                            }}
+                                        >
+                                            {isUploading ? (
+                                                <motion.div
+                                                    animate={{ rotate: 360 }}
+                                                    transition={{ repeat: Infinity, duration: 1 }}
+                                                    style={{ width: '18px', height: '18px', border: '2px solid white', borderTopColor: 'transparent', borderRadius: '50%' }}
+                                                />
+                                            ) : (
+                                                <Send size={18} fill="white" />
+                                            )}
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <>
                                     <button
-                                        onClick={cancelRecording}
+                                        onClick={() => fileInputRef.current?.click()}
                                         disabled={isUploading}
-                                        title="Cancel Recording"
                                         style={{
-                                            background: 'rgba(255, 255, 255, 0.1)',
-                                            border: '1px solid rgba(255, 255, 255, 0.2)',
-                                            color: '#ef4444',
                                             padding: '8px',
-                                            borderRadius: '50%',
-                                            cursor: isUploading ? 'default' : 'pointer',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            transition: 'all 0.2s'
+                                            background: 'none',
+                                            border: 'none',
+                                            color: isUploading ? 'var(--text-secondary)' : 'var(--accent-color)',
+                                            cursor: isUploading ? 'default' : 'pointer'
                                         }}
                                     >
-                                        <Trash2 size={18} />
+                                        <FileText size={20} />
                                     </button>
                                     <button
-                                        onClick={stopRecording}
-                                        disabled={isUploading}
-                                        title="Send Voice Message"
+                                        onClick={() => setShowSchedule(!showSchedule)}
+                                        title="Schedule message"
                                         style={{
-                                            background: isUploading ? 'var(--text-secondary)' : '#ef4444',
-                                            border: 'none',
-                                            color: 'white',
                                             padding: '8px',
-                                            borderRadius: '50%',
-                                            cursor: isUploading ? 'default' : 'pointer',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            boxShadow: '0 2px 8px rgba(239, 68, 68, 0.4)'
+                                            background: 'none',
+                                            border: 'none',
+                                            color: (showSchedule || scheduledDate) ? 'var(--accent-color)' : 'var(--text-secondary)',
+                                            cursor: 'pointer',
+                                            position: 'relative'
                                         }}
                                     >
-                                        {isUploading ? (
-                                            <motion.div
-                                                animate={{ rotate: 360 }}
-                                                transition={{ repeat: Infinity, duration: 1 }}
-                                                style={{ width: '18px', height: '18px', border: '2px solid white', borderTopColor: 'transparent', borderRadius: '50%' }}
-                                            />
-                                        ) : (
-                                            <Send size={18} fill="white" />
+                                        <Clock size={20} />
+                                        {scheduledDate && (
+                                            <span style={{
+                                                position: 'absolute',
+                                                top: '6px',
+                                                right: '6px',
+                                                width: '6px',
+                                                height: '6px',
+                                                borderRadius: '50%',
+                                                backgroundColor: 'var(--accent-color)',
+                                                border: '1px solid var(--bg-tertiary)'
+                                            }} />
                                         )}
                                     </button>
-                                </div>
-                            </div>
-                        ) : (
-                            <>
-                                <button
-                                    onClick={() => fileInputRef.current?.click()}
-                                    disabled={isUploading}
-                                    style={{
-                                        padding: '8px',
-                                        background: 'none',
-                                        border: 'none',
-                                        color: isUploading ? 'var(--text-secondary)' : 'var(--accent-color)',
-                                        cursor: isUploading ? 'default' : 'pointer'
-                                    }}
-                                >
-                                    <FileText size={20} />
-                                </button>
-                                <button
-                                    onClick={() => setShowSchedule(!showSchedule)}
-                                    title="Schedule message"
-                                    style={{
-                                        padding: '8px',
-                                        background: 'none',
-                                        border: 'none',
-                                        color: (showSchedule || scheduledDate) ? 'var(--accent-color)' : 'var(--text-secondary)',
-                                        cursor: 'pointer',
-                                        position: 'relative'
-                                    }}
-                                >
-                                    <Clock size={20} />
-                                    {scheduledDate && (
-                                        <span style={{
-                                            position: 'absolute',
-                                            top: '6px',
-                                            right: '6px',
-                                            width: '6px',
-                                            height: '6px',
-                                            borderRadius: '50%',
-                                            backgroundColor: 'var(--accent-color)',
-                                            border: '1px solid var(--bg-tertiary)'
-                                        }} />
-                                    )}
-                                </button>
-                                <input
-                                    type="file"
-                                    ref={fileInputRef}
-                                    onChange={handleFileChange}
-                                    style={{ display: 'none' }}
-                                    accept="image/*,video/*"
-                                />
-                                <textarea
-                                    value={inputValue}
-                                    onChange={(e) => setInputValue(e.target.value)}
-                                    onKeyDown={handleKeyPress}
-                                    placeholder="Aa"
-                                    style={{
-                                        flex: 1,
-                                        backgroundColor: 'transparent',
-                                        border: 'none',
-                                        color: 'var(--text-primary)',
-                                        fontSize: '14px',
-                                        padding: '8px 4px',
-                                        outline: 'none',
-                                        resize: 'none',
-                                        height: '36px',
-                                        fontFamily: 'inherit',
-                                        minWidth: 0,
-                                        display: 'flex',
-                                        alignItems: 'center'
-                                    }}
-                                />
-                                <button
-                                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                                    style={{
-                                        padding: '8px',
-                                        background: 'none',
-                                        border: 'none',
-                                        color: themeColor || 'var(--accent-color)',
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    <Smile size={20} />
-                                </button>
-                                {inputValue.trim() ? (
+                                    <input
+                                        type="file"
+                                        ref={fileInputRef}
+                                        onChange={handleFileChange}
+                                        style={{ display: 'none' }}
+                                        accept="image/*,video/*"
+                                    />
+                                    <textarea
+                                        value={inputValue}
+                                        onChange={(e) => setInputValue(e.target.value)}
+                                        onKeyDown={handleKeyPress}
+                                        placeholder="Aa"
+                                        style={{
+                                            flex: 1,
+                                            backgroundColor: 'transparent',
+                                            border: 'none',
+                                            color: 'var(--text-primary)',
+                                            fontSize: '14px',
+                                            padding: '8px 4px',
+                                            outline: 'none',
+                                            resize: 'none',
+                                            height: '36px',
+                                            fontFamily: 'inherit',
+                                            minWidth: 0,
+                                            display: 'flex',
+                                            alignItems: 'center'
+                                        }}
+                                    />
                                     <button
-                                        onClick={handleSend}
+                                        onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                                         style={{
                                             padding: '8px',
                                             background: 'none',
                                             border: 'none',
                                             color: themeColor || 'var(--accent-color)',
-                                            cursor: 'pointer',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            flexShrink: 0
+                                            cursor: 'pointer'
                                         }}
                                     >
-                                        <Send size={20} />
+                                        <Smile size={20} />
                                     </button>
-                                ) : (
-                                    <button
-                                        onClick={startRecording}
-                                        style={{
-                                            padding: '8px',
-                                            background: 'none',
-                                            border: 'none',
-                                            color: 'var(--accent-color)',
-                                            cursor: 'pointer',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            flexShrink: 0
-                                        }}
-                                    >
-                                        <Mic size={20} />
-                                    </button>
-                                )}
-                            </>
-                        )}
-                    </div>
-                )}
+                                    {inputValue.trim() ? (
+                                        <button
+                                            onClick={handleSend}
+                                            style={{
+                                                padding: '8px',
+                                                background: 'none',
+                                                border: 'none',
+                                                color: themeColor || 'var(--accent-color)',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                flexShrink: 0
+                                            }}
+                                        >
+                                            <Send size={20} />
+                                        </button>
+                                    ) : (
+                                        <button
+                                            onClick={startRecording}
+                                            style={{
+                                                padding: '8px',
+                                                background: 'none',
+                                                border: 'none',
+                                                color: 'var(--accent-color)',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                flexShrink: 0
+                                            }}
+                                        >
+                                            <Mic size={20} />
+                                        </button>
+                                    )}
+                                </>
+                            )}
+                        </div>
+                    )}
             </div>
             <ImageEditorModal
                 isOpen={isImageEditorOpen}

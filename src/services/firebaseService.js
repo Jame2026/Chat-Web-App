@@ -50,6 +50,7 @@ export const sendMessage = async (conversationId, senderId, text, imageURL = nul
             createdAt: scheduledDate ? scheduledDate : serverTimestamp(),
             scheduledAt: scheduledDate ? scheduledDate : null,
             status: scheduledDate ? 'scheduled' : 'sent',
+            seenBy: [] // Initialize empty array for tracking readers
         });
         console.log("✅ Saved! ID:", docRef.id);
     } catch (error) {
@@ -210,22 +211,28 @@ export const markAsSeen = async (conversationId, currentUserId) => {
         const q = query(
             collection(db, MESSAGES_COLLECTION),
             where("conversationId", "==", conversationId),
-            where("status", "==", "sent")
+            orderBy("createdAt", "desc"),
+            limit(40) // Only mark recent messages as seen
         );
 
         const snapshot = await getDocs(q);
         const updatePromises = snapshot.docs
-            .filter(doc => doc.data().senderId !== currentUserId)
+            .filter(doc => {
+                const data = doc.data();
+                return data.senderId !== currentUserId && (!data.seenBy || !data.seenBy.includes(currentUserId));
+            })
             .map(messageDoc => {
                 const messageRef = doc(db, MESSAGES_COLLECTION, messageDoc.id);
                 return updateDoc(messageRef, {
-                    status: 'seen',
+                    seenBy: arrayUnion(currentUserId),
+                    status: 'seen', // keep for legacy/simple tracking
                     seenAt: serverTimestamp()
                 });
             });
 
         if (updatePromises.length > 0) {
             await Promise.all(updatePromises);
+            console.log(`👁️ Marked ${updatePromises.length} messages as seen by ${currentUserId}`);
         }
     } catch (error) {
         console.error("❌ Error marking messages as seen:", error);
@@ -259,6 +266,23 @@ export const kickUserFromGroup = async (groupId, userId) => {
         console.log(`✅ User ${userId} kicked from group ${groupId}`);
     } catch (error) {
         console.error("❌ Error kicking user:", error);
+        throw error;
+    }
+};
+
+/**
+ * Adds a user to a group
+ */
+export const addMemberToGroup = async (groupId, userId) => {
+    if (!groupId || !userId) return;
+    const groupRef = doc(db, 'groups', groupId);
+    try {
+        await updateDoc(groupRef, {
+            members: arrayUnion(userId)
+        });
+        console.log(`✅ User ${userId} added to group ${groupId}`);
+    } catch (error) {
+        console.error("❌ Error adding user to group:", error);
         throw error;
     }
 };

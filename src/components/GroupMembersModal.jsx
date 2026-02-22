@@ -1,10 +1,11 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, UserMinus, LogOut, Crown, Settings, Users, Camera, Check, Image as ImageIcon } from 'lucide-react';
+import { X, UserMinus, LogOut, Crown, Settings, Users, Camera, Check, Image as ImageIcon, Search, UserPlus } from 'lucide-react';
 import ImageEditorModal from './ImageEditorModal';
 
-const GroupMembersModal = ({ isOpen, onClose, group, users, currentUser, onKickUser, onLeaveGroup, onUpdateGroup, initialTab = 'members' }) => {
+const GroupMembersModal = ({ isOpen, onClose, group, users, currentUser, onKickUser, onAddMember, onLeaveGroup, onUpdateGroup, initialTab = 'members' }) => {
     const [activeTab, setActiveTab] = useState(initialTab);
+    const [search, setSearch] = useState('');
     const [newName, setNewName] = useState(group?.name || '');
     const [newTheme, setNewTheme] = useState(group?.themeColor || 'var(--accent-color)');
     const [messageSize, setMessageSize] = useState(group?.messageSize || 14);
@@ -219,6 +220,112 @@ const GroupMembersModal = ({ isOpen, onClose, group, users, currentUser, onKickU
                     }} className="settings-content">
                         {activeTab === 'members' ? (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                {/* Add Member Section */}
+                                <div style={{ marginBottom: '16px' }}>
+                                    <div style={{ position: 'relative', marginBottom: '12px' }}>
+                                        <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+                                        <input
+                                            type="text"
+                                            placeholder="Add new members..."
+                                            value={search}
+                                            onChange={(e) => setSearch(e.target.value)}
+                                            style={{
+                                                width: '100%',
+                                                backgroundColor: 'var(--bg-tertiary)',
+                                                border: '1px solid var(--border-color)',
+                                                borderRadius: '12px',
+                                                padding: '10px 12px 10px 36px',
+                                                color: 'var(--text-primary)',
+                                                fontSize: '13px',
+                                                outline: 'none',
+                                                transition: 'all 0.2s'
+                                            }}
+                                            onFocus={(e) => e.target.style.borderColor = group.themeColor}
+                                            onBlur={(e) => e.target.style.borderColor = 'var(--border-color)'}
+                                        />
+                                    </div>
+
+                                    {search.trim() && (
+                                        <div style={{
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            gap: '4px',
+                                            backgroundColor: 'var(--bg-primary)',
+                                            borderRadius: '12px',
+                                            padding: '8px',
+                                            border: '1px solid var(--border-color)',
+                                            maxHeight: '200px',
+                                            overflowY: 'auto',
+                                            marginBottom: '16px'
+                                        }}>
+                                            {users.filter(u =>
+                                                !group.members.includes(u.uid) &&
+                                                (u.displayName?.toLowerCase().includes(search.toLowerCase()) ||
+                                                    u.email?.toLowerCase().includes(search.toLowerCase()))
+                                            ).length === 0 ? (
+                                                <div style={{ padding: '12px', textAlign: 'center', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                                    No users found
+                                                </div>
+                                            ) : (
+                                                users.filter(u =>
+                                                    !group.members.includes(u.uid) &&
+                                                    (u.displayName?.toLowerCase().includes(search.toLowerCase()) ||
+                                                        u.email?.toLowerCase().includes(search.toLowerCase()))
+                                                ).map(user => (
+                                                    <div
+                                                        key={user.uid}
+                                                        style={{
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'space-between',
+                                                            padding: '8px 10px',
+                                                            borderRadius: '8px',
+                                                            cursor: 'pointer',
+                                                            transition: 'all 0.2s',
+                                                            backgroundColor: 'transparent'
+                                                        }}
+                                                        className="add-member-item"
+                                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'}
+                                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                        onClick={() => {
+                                                            onAddMember(user.uid);
+                                                            setSearch('');
+                                                        }}
+                                                    >
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                            <div style={{
+                                                                width: '32px',
+                                                                height: '32px',
+                                                                borderRadius: '8px',
+                                                                backgroundColor: group.themeColor,
+                                                                backgroundImage: user.photoURL ? `url(${user.photoURL})` : 'none',
+                                                                backgroundSize: 'cover',
+                                                                backgroundPosition: 'center',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                fontSize: '14px',
+                                                                fontWeight: 'bold',
+                                                                color: 'white'
+                                                            }}>
+                                                                {!user.photoURL && (user.displayName || user.email || '?').charAt(0).toUpperCase()}
+                                                            </div>
+                                                            <div style={{ fontSize: '13px', fontWeight: '600' }}>
+                                                                {user.displayName || user.email?.split('@')[0]}
+                                                            </div>
+                                                        </div>
+                                                        <UserPlus size={16} color={group.themeColor} />
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>
+                                    Current Members • {memberDetails.length}
+                                </div>
+
                                 {memberDetails.map(member => {
                                     const isMemberMe = member.uid === currentUser.uid;
                                     const isMemberOwner = member.uid === group.createdBy;
