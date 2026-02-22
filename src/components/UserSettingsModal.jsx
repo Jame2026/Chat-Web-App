@@ -42,7 +42,12 @@ const UserSettingsModal = ({ isOpen, onClose, user, onUpdateSettings, theme, isB
         { id: 'sunset', label: 'Sunset', value: 'linear-gradient(135deg, #ff9a9e 0%, #fad0c4 99%, #fad0c4 100%)' },
         { id: 'ocean', label: 'Ocean', value: 'linear-gradient(120deg, #a1c4fd 0%, #c2e9fb 100%)' },
         { id: 'midnight', label: 'Midnight', value: 'linear-gradient(to top, #30cfd0 0%, #330867 100%)' },
-        { id: 'lush', label: 'Lush', value: 'linear-gradient(to top, #d299c2 0%, #fef9d7 100%)' }
+        { id: 'lush', label: 'Lush', value: 'linear-gradient(to top, #d299c2 0%, #fef9d7 100%)' },
+        { id: 'royal', label: 'Royal', value: 'linear-gradient(to right, #6a11cb 0%, #2575fc 100%)' },
+        { id: 'rose', label: 'Rose', value: 'linear-gradient(to top, #f43b47 0%, #453a94 100%)' },
+        { id: 'cosmic', label: 'Cosmic', value: 'linear-gradient(to top, #09203f 0%, #537895 100%)' },
+        { id: 'sky', label: 'Sky', value: 'linear-gradient(to top, #4facfe 0%, #00f2fe 100%)' },
+        { id: 'aurora', label: 'Aurora', value: 'linear-gradient(to top, #43e97b 0%, #38f9d7 100%)' }
     ];
 
     const handleSave = () => {
@@ -296,46 +301,52 @@ const UserSettingsModal = ({ isOpen, onClose, user, onUpdateSettings, theme, isB
                             </label>
                             <div style={{
                                 display: 'grid',
-                                gridTemplateColumns: 'repeat(auto-fill, minmax(64px, 1fr))',
-                                gap: '12px'
+                                gridTemplateColumns: 'repeat(5, 1fr)',
+                                gap: '10px'
                             }}>
                                 {wallpapers.map((wp) => (
-                                    <button
+                                    <motion.button
                                         key={wp.id}
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
                                         onClick={() => setSelectedWallpaper(wp.value)}
                                         style={{
-                                            height: '48px',
-                                            borderRadius: '12px',
-                                            border: selectedWallpaper === wp.value ? `2px solid ${selectedColor}` : '2px solid transparent',
+                                            aspectRatio: '2/3',
+                                            borderRadius: '10px',
+                                            border: selectedWallpaper === wp.value ? `3px solid ${selectedColor}` : '2px solid var(--border-color)',
                                             background: wp.value || 'var(--bg-tertiary)',
                                             cursor: 'pointer',
                                             position: 'relative',
                                             overflow: 'hidden',
                                             transition: 'all 0.2s',
+                                            padding: 0,
                                             display: 'flex',
                                             alignItems: 'center',
-                                            justifyContent: 'center',
-                                            boxShadow: selectedWallpaper === wp.value ? `0 0 0 3px ${selectedColor}22` : 'none'
+                                            justifyContent: 'center'
                                         }}
                                         title={wp.label}
                                     >
                                         {selectedWallpaper === wp.value && (
                                             <div style={{
+                                                position: 'absolute',
+                                                top: '4px',
+                                                right: '4px',
                                                 backgroundColor: selectedColor,
                                                 borderRadius: '50%',
                                                 padding: '2px',
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 justifyContent: 'center',
-                                                color: 'white'
+                                                color: 'white',
+                                                boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                                             }}>
-                                                <Check size={12} strokeWidth={4} />
+                                                <Check size={10} strokeWidth={4} />
                                             </div>
                                         )}
-                                        {!wp.value && !selectedWallpaper && (
-                                            <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: 'bold' }}>Default</span>
+                                        {!wp.value && (
+                                            <div style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: '800', opacity: 0.6 }}>NONE</div>
                                         )}
-                                    </button>
+                                    </motion.button>
                                 ))}
                             </div>
                         </div>

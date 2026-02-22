@@ -1,10 +1,11 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, FileText, Smile, MoreHorizontal, ArrowLeft, Trash2, User, Users, Pencil, Check, X as CloseIcon, Mic, Play, Pause, Volume2, Clock, Shield } from 'lucide-react';
+import { Send, FileText, Smile, MoreHorizontal, ArrowLeft, Trash2, User, Users, Pencil, Check, X as CloseIcon, Mic, Play, Pause, Volume2, Clock, Shield, Settings } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import EmojiPicker from 'emoji-picker-react';
+import ImageEditorModal from './ImageEditorModal';
 
-const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, isBlocked, isBlockedByThem, onToggleBlock, onOpenUserSettings, themeColor, wallpaper, onReaction, onEditMessage, onClearChat, onViewProfile, currentUserId }) => {
+const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, isBlocked, isBlockedByThem, onToggleBlock, onOpenUserSettings, themeColor, wallpaper, onReaction, onEditMessage, onDeleteMessage, onClearChat, onViewProfile, currentUserId, onOpenGroupMembers }) => {
     const [inputValue, setInputValue] = useState('');
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [showMoreMenu, setShowMoreMenu] = useState(false);
@@ -28,7 +29,8 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
     const [showSchedule, setShowSchedule] = useState(false);
     const [scheduledDate, setScheduledDate] = useState('');
     const [currentTime, setCurrentTime] = useState(Date.now());
-    const scheduleButtonRef = useRef(null);
+    const [imageForEditing, setImageForEditing] = useState(null);
+    const [isImageEditorOpen, setIsImageEditorOpen] = useState(false);
 
 
     const formatRelativeTime = (timestamp) => {
@@ -145,22 +147,37 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
         if (e.key === 'Escape') cancelEditing();
     };
 
-    const handleFileChange = async (e) => {
+    const handleFileChange = (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => {
+            setImageForEditing(reader.result);
+            setIsImageEditorOpen(true);
+        };
+        e.target.value = ''; // Reset input
+    };
+
+    const handleSaveEditedImage = async (blob) => {
+        setIsImageEditorOpen(false);
         setIsUploading(true);
         try {
-            // We pass the file up to App.jsx to handle the storage upload
-            // Since ChatArea doesn't have storage access directly passed as prop but App does
-            await onSendMessage("", file); // Pass empty text and the file
+            const file = new File([blob], "image.jpg", { type: "image/jpeg" });
+            await onSendMessage("", file);
         } catch (error) {
             console.error("Error uploading file:", error);
             alert("Failed to send image");
         } finally {
             setIsUploading(false);
-            e.target.value = ''; // Reset input
+            setImageForEditing(null);
         }
+    };
+
+    const handleCancelEdit = () => {
+        setIsImageEditorOpen(false);
+        setImageForEditing(null);
     };
 
     const startRecording = async () => {
@@ -417,20 +434,36 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
                         <ArrowLeft size={22} color="var(--accent-color)" />
                     </button>
 
-                    <div style={{
-                        width: 'var(--avatar-size-lg)',
-                        height: 'var(--avatar-size-lg)',
-                        borderRadius: '50%',
-                        background: activeConversation?.photoURL ? `url(${activeConversation.photoURL}) center/cover` : (activeConversation?.themeColor || 'var(--accent-color)'),
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        marginRight: '12px',
-                        fontSize: '18px',
-                        fontWeight: 'bold',
-                        color: '#fff',
-                        boxShadow: '0 4px 8px rgba(0,0,0,0.15)'
-                    }}>
+                    <div
+                        onClick={() => activeConversation?.type !== 'channel' && onViewProfile()}
+                        style={{
+                            width: 'var(--avatar-size-lg)',
+                            height: 'var(--avatar-size-lg)',
+                            borderRadius: '50%',
+                            background: activeConversation?.photoURL ? `url("${activeConversation.photoURL}") center/cover` : (activeConversation?.themeColor || 'var(--accent-color)'),
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            marginRight: '12px',
+                            fontSize: '18px',
+                            fontWeight: 'bold',
+                            color: '#fff',
+                            boxShadow: '0 4px 10px rgba(0,0,0,0.2)',
+                            cursor: activeConversation?.type === 'channel' ? 'default' : 'pointer',
+                            transition: 'transform 0.2s',
+                            flexShrink: 0
+                        }}
+                        onMouseEnter={(e) => {
+                            if (activeConversation?.type !== 'channel') {
+                                e.currentTarget.style.transform = 'scale(1.05)';
+                            }
+                        }}
+                        onMouseLeave={(e) => {
+                            if (activeConversation?.type !== 'channel') {
+                                e.currentTarget.style.transform = 'scale(1)';
+                            }
+                        }}
+                    >
                         {!activeConversation?.photoURL && (
                             activeConversation?.type === 'channel'
                                 ? <Users size={20} />
@@ -438,7 +471,27 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
                         )}
                     </div>
                     <div>
-                        <div style={{ fontSize: '17px', fontWeight: '800', color: 'var(--text-primary)', letterSpacing: '-0.3px', lineHeight: '1.2' }}>
+                        <div
+                            onClick={() => activeConversation?.type !== 'channel' && onViewProfile()}
+                            style={{
+                                fontSize: '17px',
+                                fontWeight: '800',
+                                color: 'var(--text-primary)',
+                                letterSpacing: '-0.3px',
+                                lineHeight: '1.2',
+                                cursor: activeConversation?.type === 'channel' ? 'default' : 'pointer'
+                            }}
+                            onMouseEnter={(e) => {
+                                if (activeConversation?.type !== 'channel') {
+                                    e.currentTarget.style.color = 'var(--accent-color)';
+                                }
+                            }}
+                            onMouseLeave={(e) => {
+                                if (activeConversation?.type !== 'channel') {
+                                    e.currentTarget.style.color = 'var(--text-primary)';
+                                }
+                            }}
+                        >
                             {activeConversation?.nickname || activeConversation?.name}
                         </div>
                         <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '500' }}>
@@ -486,7 +539,7 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
                                     zIndex: 100
                                 }}
                             >
-                                {activeConversation.type === 'user' && (
+                                {activeConversation.type === 'user' ? (
                                     <>
                                         <button
                                             onClick={() => {
@@ -588,6 +641,59 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
                                             Clear Chat
                                         </button>
                                     </>
+                                ) : (
+                                    <>
+                                        <button
+                                            onClick={() => {
+                                                onOpenGroupMembers();
+                                                setShowMoreMenu(false);
+                                            }}
+                                            style={{
+                                                width: '100%',
+                                                padding: '8px 12px',
+                                                textAlign: 'left',
+                                                backgroundColor: 'transparent',
+                                                border: 'none',
+                                                color: 'var(--text-primary)',
+                                                cursor: 'pointer',
+                                                borderRadius: '6px',
+                                                fontSize: '14px',
+                                                fontWeight: '500',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '8px'
+                                            }}
+                                            className="menu-item"
+                                        >
+                                            <Users size={16} />
+                                            Group Members
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                onOpenGroupMembers('settings');
+                                                setShowMoreMenu(false);
+                                            }}
+                                            style={{
+                                                width: '100%',
+                                                padding: '8px 12px',
+                                                textAlign: 'left',
+                                                backgroundColor: 'transparent',
+                                                border: 'none',
+                                                color: 'var(--text-primary)',
+                                                cursor: 'pointer',
+                                                borderRadius: '6px',
+                                                fontSize: '14px',
+                                                fontWeight: '500',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '8px'
+                                            }}
+                                            className="menu-item"
+                                        >
+                                            <Settings size={16} />
+                                            Group Settings
+                                        </button>
+                                    </>
                                 )}
                             </motion.div>
                         )}
@@ -604,6 +710,8 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
                 background: wallpaper || 'var(--bg-primary)',
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
+                backgroundAttachment: 'fixed',
+                backgroundRepeat: 'no-repeat',
                 position: 'relative'
             }}>
                 <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -707,9 +815,9 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
                                                         padding: isMediaOnly ? '0' : '10px 14px',
                                                         borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
                                                         background: isMediaOnly ? 'transparent' : (isMe
-                                                            ? `linear-gradient(135deg, ${themeColor || 'var(--bubble-me)'} 0%, ${themeColor ? themeColor + 'dd' : 'var(--accent-hover)'} 100%)`
+                                                            ? (themeColor ? `linear-gradient(135deg, ${themeColor} 0%, ${themeColor}dd 100%)` : (activeConversation.type !== 'channel' && wallpaper ? wallpaper : 'var(--bubble-me)'))
                                                             : 'var(--bubble-other)'),
-                                                        backdropFilter: (!isMe && !isMediaOnly) ? 'blur(8px)' : 'none',
+                                                        backdropFilter: (!isMediaOnly) ? 'blur(8px)' : 'none',
                                                         border: (!isMe && !isMediaOnly) ? '1px solid var(--border-color)' : 'none',
                                                         color: isMe ? '#ffffff' : 'var(--text-primary)',
                                                         fontSize: '14px',
@@ -792,7 +900,7 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
                                                                     padding: '6px 10px',
                                                                     color: '#fff',
                                                                     outline: 'none',
-                                                                    fontSize: '14px'
+                                                                    fontSize: `${activeConversation?.messageSize || 14}px`
                                                                 }}
                                                             />
                                                             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
@@ -801,7 +909,7 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
                                                             </div>
                                                         </div>
                                                     ) : (
-                                                        <>
+                                                        <div style={{ fontSize: `${activeConversation?.messageSize || 14}px`, lineHeight: '1.4' }}>
                                                             {msg.text}
                                                             {msg.edited && (
                                                                 <span style={{
@@ -813,7 +921,7 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
                                                                     verticalAlign: 'middle'
                                                                 }}>(edited)</span>
                                                             )}
-                                                        </>
+                                                        </div>
                                                     )}
                                                     {/* Reactions Display */}
                                                     {msg.reactions && Object.keys(msg.reactions).some(emoji => msg.reactions[emoji].length > 0) && (
@@ -918,27 +1026,54 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
                                                         </motion.div>
                                                     )}
                                                     {isMe && (
-                                                        <motion.button
-                                                            initial={{ opacity: 0, scale: 0.8, x: 5 }}
-                                                            animate={{ opacity: 1, scale: 1, x: 0 }}
-                                                            onClick={() => startEditing(msg)}
-                                                            style={{
-                                                                background: 'var(--bg-tertiary)',
-                                                                border: 'none',
-                                                                color: 'var(--text-secondary)',
-                                                                padding: '6px',
-                                                                borderRadius: '50%',
-                                                                cursor: 'pointer',
-                                                                display: 'flex',
-                                                                alignItems: 'center',
-                                                                justifyContent: 'center',
-                                                                boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
-                                                            }}
-                                                            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--accent-color)'}
-                                                            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
-                                                        >
-                                                            <Pencil size={14} />
-                                                        </motion.button>
+                                                        <div style={{ display: 'flex', gap: '4px' }}>
+                                                            <motion.button
+                                                                initial={{ opacity: 0, scale: 0.8, x: 5 }}
+                                                                animate={{ opacity: 1, scale: 1, x: 0 }}
+                                                                onClick={() => startEditing(msg)}
+                                                                style={{
+                                                                    background: 'var(--bg-tertiary)',
+                                                                    border: 'none',
+                                                                    color: 'var(--text-secondary)',
+                                                                    padding: '6px',
+                                                                    borderRadius: '50%',
+                                                                    cursor: 'pointer',
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                    boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
+                                                                }}
+                                                                onMouseEnter={(e) => e.currentTarget.style.color = 'var(--accent-color)'}
+                                                                onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
+                                                            >
+                                                                <Pencil size={14} />
+                                                            </motion.button>
+                                                            <motion.button
+                                                                initial={{ opacity: 0, scale: 0.8, x: 5 }}
+                                                                animate={{ opacity: 1, scale: 1, x: 0 }}
+                                                                onClick={() => {
+                                                                    if (window.confirm('Delete this message?')) {
+                                                                        onDeleteMessage(msg.id);
+                                                                    }
+                                                                }}
+                                                                style={{
+                                                                    background: 'var(--bg-tertiary)',
+                                                                    border: 'none',
+                                                                    color: '#ef4444',
+                                                                    padding: '6px',
+                                                                    borderRadius: '50%',
+                                                                    cursor: 'pointer',
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                    boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
+                                                                }}
+                                                                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)'; }}
+                                                                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'; }}
+                                                            >
+                                                                <Trash2 size={14} />
+                                                            </motion.button>
+                                                        </div>
                                                     )}
                                                 </div>
                                             )}
@@ -1413,6 +1548,14 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
                     </div>
                 )}
             </div>
+            <ImageEditorModal
+                isOpen={isImageEditorOpen}
+                image={imageForEditing}
+                aspect={4 / 3}
+                shape="rect"
+                onCancel={handleCancelEdit}
+                onSave={handleSaveEditedImage}
+            />
         </div >
     );
 };

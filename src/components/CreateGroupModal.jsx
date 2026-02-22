@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Search, Users, Check, Camera, Plus } from 'lucide-react';
 
-const CreateGroupModal = ({ isOpen, onClose, users, currentUser, onCreateGroup, theme }) => {
+const CreateGroupModal = ({ isOpen, onClose, users, currentUser, onCreateGroup }) => {
     const [groupName, setGroupName] = useState('');
     const [search, setSearch] = useState('');
     const [selectedUsers, setSelectedUsers] = useState([]);

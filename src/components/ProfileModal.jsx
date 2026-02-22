@@ -10,6 +10,8 @@ const ProfileModal = ({ isOpen, onClose, user, isCurrentUser, onOpenSettings, is
 
     const accentColor = user.themeColor || 'var(--accent-color)';
 
+    const isGroup = user.type === 'channel';
+
     const statusColors = {
         active: 'var(--success-color)',
         away: '#f59e0b',
@@ -21,9 +23,11 @@ const ProfileModal = ({ isOpen, onClose, user, isCurrentUser, onOpenSettings, is
     // Mock data for the profile
     const profileInfo = {
         phone: user.phone || '+1 (555) 001-2024',
-        joined: user.joinedDate || 'Joined Jan 2024',
+        joined: user.joinedDate || (isGroup ?
+            (user.createdAt?.seconds ? `Created ${new Date(user.createdAt.seconds * 1000).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}` : 'Recently Created')
+            : 'Joined Jan 2024'),
         location: user.location || 'Unknown Location',
-        bio: user.bio || `Passionate about creating amazing digital experiences. Let's build something great!`,
+        bio: user.bio || (isGroup ? user.description : `Passionate about creating amazing digital experiences. Let's build something great!`),
         instagram: user.instagram,
         telegram: user.telegram,
         link: user.link,
@@ -62,19 +66,21 @@ const ProfileModal = ({ isOpen, onClose, user, isCurrentUser, onOpenSettings, is
                         display: 'flex',
                         flexDirection: 'column',
                         position: 'relative',
-                        height: '720px', // Fixed height for consistency
+                        height: isGroup ? 'auto' : '720px', // Auto height for groups since they have less content
+                        maxHeight: '90vh'
                     }}
                 >
                     {/* Immersive Header */}
                     <div style={{
-                        height: '310px',
-                        background: `linear-gradient(rgba(0,0,0,0.1), rgba(0,0,0,0.2)), url('${user.photoURL || 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=1000&auto=format&fit=crop'}') center 14% / cover no-repeat`,
+                        height: isGroup ? '220px' : '310px',
+                        background: `linear-gradient(rgba(0,0,0,0.1), rgba(0,0,0,0.2)), url("${user.photoURL || 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=1000&auto=format&fit=crop'}") center 14% / cover no-repeat`,
                         position: 'relative',
                         display: 'flex',
                         alignItems: 'flex-start',
                         justifyContent: 'flex-end',
                         padding: '16px',
-                        backgroundColor: accentColor // Fallback color
+                        backgroundColor: accentColor, // Fallback color
+                        transition: 'height 0.3s ease'
                     }}>
                         <div style={{
                             position: 'absolute',
@@ -163,93 +169,101 @@ const ProfileModal = ({ isOpen, onClose, user, isCurrentUser, onOpenSettings, is
                                     <ExternalLink size={12} />
                                 </div>
                             )}
-                            <div style={{
-                                position: 'absolute',
-                                bottom: '8px',
-                                right: '-4px',
-                                width: '24px',
-                                height: '24px',
-                                background: statusColor,
-                                border: '4px solid var(--bg-secondary)',
-                                borderRadius: '50%',
-                                boxShadow: '0 4px 10px rgba(0,0,0,0.2)'
-                            }} />
+                            {!isGroup && (
+                                <div style={{
+                                    position: 'absolute',
+                                    bottom: '8px',
+                                    right: '-4px',
+                                    width: '24px',
+                                    height: '24px',
+                                    background: statusColor,
+                                    border: '4px solid var(--bg-secondary)',
+                                    borderRadius: '50%',
+                                    boxShadow: '0 4px 10px rgba(0,0,0,0.2)'
+                                }} />
+                            )}
                         </div>
 
                         {/* Name & Title */}
                         <div style={{ marginBottom: '14px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
                                 <h2 style={{ fontSize: '20px', fontWeight: '800', letterSpacing: '-0.3px' }}>
-                                    {user.nickname || user.displayName || user.name}
+                                    {isGroup ? user.name : (user.nickname || user.displayName || user.name)}
                                 </h2>
                                 <Heart size={16} color={accentColor} fill={accentColor} style={{ opacity: 0.7 }} />
                             </div>
                             <p style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                @{(user.nickname || user.displayName || user.name || 'user').toLowerCase().replace(/\s+/g, '_')}
+                                @{(isGroup ? user.name : (user.nickname || user.displayName || user.name || 'user')).toLowerCase().replace(/\s+/g, '_')}
                                 <span style={{ width: '3px', height: '3px', background: 'var(--border-color)', borderRadius: '50%' }} />
                                 {profileInfo.joined}
                             </p>
                         </div>
 
-                        {/* Bio Section */}
-                        <div style={{ marginBottom: '16px' }}>
-                            <h3 style={{ fontSize: '13px', fontWeight: '800', color: accentColor, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>About Me</h3>
-                            <p style={{ fontSize: '13px', lineHeight: '1.4', color: 'var(--text-primary)', opacity: 0.9 }}>
-                                {profileInfo.bio}
-                            </p>
-                        </div>
-
-                        {/* Links & Info Card */}
-                        <div style={{
-                            display: 'grid',
-                            gridTemplateColumns: '1fr',
-                            gap: '12px',
-                            backgroundColor: 'var(--bg-tertiary)',
-                            padding: '12px 16px',
-                            borderRadius: '16px',
-                            border: '1px solid var(--border-color)',
-                            marginBottom: '12px'
-                        }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', fontSize: '14px', fontWeight: '500' }}>
-                                <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <MapPin size={16} color={accentColor} />
-                                </div>
-                                <span>{profileInfo.location}</span>
+                        {/* Bio Section - Only for users or if group has a specific description */}
+                        {(!isGroup || user.description) && (
+                            <div style={{ marginBottom: '16px' }}>
+                                <h3 style={{ fontSize: '13px', fontWeight: '800', color: accentColor, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>
+                                    {isGroup ? 'Group Description' : 'About Me'}
+                                </h3>
+                                <p style={{ fontSize: '13px', lineHeight: '1.4', color: 'var(--text-primary)', opacity: 0.9 }}>
+                                    {isGroup ? user.description : profileInfo.bio}
+                                </p>
                             </div>
+                        )}
 
-                            {/* Social Icons */}
+                        {/* Links & Info Card - Hide for Groups */}
+                        {!isGroup && (
                             <div style={{
-                                display: 'flex',
-                                gap: '16px',
-                                marginTop: '8px',
-                                paddingTop: '16px',
-                                borderTop: '1px solid rgba(255,255,255,0.05)'
+                                display: 'grid',
+                                gridTemplateColumns: '1fr',
+                                gap: '12px',
+                                backgroundColor: 'var(--bg-tertiary)',
+                                padding: '12px 16px',
+                                borderRadius: '16px',
+                                border: '1px solid var(--border-color)',
+                                marginBottom: '12px'
                             }}>
-                                {profileInfo.instagram && (
-                                    <a href={`https://instagram.com/${profileInfo.instagram}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-secondary)', transition: 'color 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.color = '#E1306C'} onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}>
-                                        <Instagram size={18} />
-                                    </a>
-                                )}
-                                {profileInfo.telegram && (
-                                    <a href={`https://t.me/${profileInfo.telegram}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-secondary)', transition: 'color 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.color = '#0088cc'} onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}>
-                                        <Send size={18} />
-                                    </a>
-                                )}
-                                {profileInfo.facebook && (
-                                    <a href={profileInfo.facebook.startsWith('http') ? profileInfo.facebook : `https://facebook.com/${profileInfo.facebook}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-secondary)', transition: 'color 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.color = '#1877F2'} onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}>
-                                        <Facebook size={18} />
-                                    </a>
-                                )}
-                                {profileInfo.link && (
-                                    <a href={profileInfo.link.startsWith('http') ? profileInfo.link : `https://${profileInfo.link}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-secondary)', transition: 'color 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.color = 'var(--accent-color)'} onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}>
-                                        <LinkIcon size={18} />
-                                    </a>
-                                )}
-                                {!profileInfo.instagram && !profileInfo.telegram && !profileInfo.facebook && !profileInfo.link && (
-                                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontStyle: 'italic' }}>No social links connected</span>
-                                )}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', fontSize: '14px', fontWeight: '500' }}>
+                                    <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <MapPin size={16} color={accentColor} />
+                                    </div>
+                                    <span>{profileInfo.location}</span>
+                                </div>
+
+                                {/* Social Icons */}
+                                <div style={{
+                                    display: 'flex',
+                                    gap: '16px',
+                                    marginTop: '8px',
+                                    paddingTop: '16px',
+                                    borderTop: '1px solid rgba(255,255,255,0.05)'
+                                }}>
+                                    {profileInfo.instagram && (
+                                        <a href={`https://instagram.com/${profileInfo.instagram}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-secondary)', transition: 'color 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.color = '#E1306C'} onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}>
+                                            <Instagram size={18} />
+                                        </a>
+                                    )}
+                                    {profileInfo.telegram && (
+                                        <a href={`https://t.me/${profileInfo.telegram}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-secondary)', transition: 'color 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.color = '#0088cc'} onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}>
+                                            <Send size={18} />
+                                        </a>
+                                    )}
+                                    {profileInfo.facebook && (
+                                        <a href={profileInfo.facebook.startsWith('http') ? profileInfo.facebook : `https://facebook.com/${profileInfo.facebook}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-secondary)', transition: 'color 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.color = '#1877F2'} onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}>
+                                            <Facebook size={18} />
+                                        </a>
+                                    )}
+                                    {profileInfo.link && (
+                                        <a href={profileInfo.link.startsWith('http') ? profileInfo.link : `https://${profileInfo.link}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-secondary)', transition: 'color 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.color = 'var(--accent-color)'} onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}>
+                                            <LinkIcon size={18} />
+                                        </a>
+                                    )}
+                                    {!profileInfo.instagram && !profileInfo.telegram && !profileInfo.facebook && !profileInfo.link && (
+                                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontStyle: 'italic' }}>No social links connected</span>
+                                    )}
+                                </div>
                             </div>
-                        </div>
+                        )}
 
                         {/* Main Action Button */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -278,7 +292,7 @@ const ProfileModal = ({ isOpen, onClose, user, isCurrentUser, onOpenSettings, is
                                     <Settings size={20} color={accentColor} />
                                     Edit Account Settings
                                 </motion.button>
-                            ) : (
+                            ) : !isGroup && (
                                 <motion.button
                                     whileHover={{ scale: 1.02, translateY: -2 }}
                                     whileTap={{ scale: 0.98 }}
@@ -306,7 +320,7 @@ const ProfileModal = ({ isOpen, onClose, user, isCurrentUser, onOpenSettings, is
                                 </motion.button>
                             )}
 
-                            {!isCurrentUser && (
+                            {!isCurrentUser && !isGroup && (
                                 <button
                                     onClick={() => {
                                         onToggleBlock();

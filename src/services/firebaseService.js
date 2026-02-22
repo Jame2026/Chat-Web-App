@@ -13,9 +13,11 @@ import {
     getDocs,
     arrayUnion,
     arrayRemove,
-    limit
+    limit,
+    deleteDoc
 } from "firebase/firestore";
-import { db } from "../firebase";
+import { ref, deleteObject } from "firebase/storage";
+import { db, storage } from "../firebase";
 
 const MESSAGES_COLLECTION = "messages";
 
@@ -242,5 +244,92 @@ export const toggleBlockUser = async (currentUserId, targetUserId, isBlocking) =
         console.log(`✅ User ${targetUserId} ${isBlocking ? 'blocked' : 'unblocked'}!`);
     } catch (error) {
         console.error("❌ Error toggling block status:", error);
+    }
+};
+/**
+ * Removes a user from a group
+ */
+export const kickUserFromGroup = async (groupId, userId) => {
+    if (!groupId || !userId) return;
+    const groupRef = doc(db, 'groups', groupId);
+    try {
+        await updateDoc(groupRef, {
+            members: arrayRemove(userId)
+        });
+        console.log(`✅ User ${userId} kicked from group ${groupId}`);
+    } catch (error) {
+        console.error("❌ Error kicking user:", error);
+        throw error;
+    }
+};
+
+/**
+ * Removes the current user from a group
+ */
+export const leaveGroup = async (groupId, userId) => {
+    if (!groupId || !userId) return;
+    const groupRef = doc(db, 'groups', groupId);
+    try {
+        await updateDoc(groupRef, {
+            members: arrayRemove(userId)
+        });
+        console.log(`✅ User ${userId} left group ${groupId}`);
+    } catch (error) {
+        console.error("❌ Error leaving group:", error);
+        throw error;
+    }
+};
+/**
+ * Updates group metadata (name, photo, theme)
+ */
+export const updateGroupMetadata = async (groupId, data) => {
+    if (!groupId) return;
+    const groupRef = doc(db, 'groups', groupId);
+    try {
+        await updateDoc(groupRef, {
+            ...data,
+            updatedAt: serverTimestamp()
+        });
+        console.log(`✅ Group ${groupId} metadata updated`);
+    } catch (error) {
+        console.error("❌ Error updating group metadata:", error);
+        throw error;
+    }
+};
+
+/**
+ * Deletes a message (and its associated media from storage)
+ */
+export const deleteMessage = async (messageId) => {
+    if (!messageId) return;
+    const messageRef = doc(db, MESSAGES_COLLECTION, messageId);
+    try {
+        // Fetch message data to check for media URLs
+        const msgDoc = await getDoc(messageRef);
+        if (msgDoc.exists()) {
+            const data = msgDoc.data();
+            const mediaURLs = [data.imageURL, data.voiceURL, data.videoURL].filter(url => !!url);
+
+            // Delete media from Storage
+            for (const url of mediaURLs) {
+                try {
+                    // Extract path from download URL or use simple ref if structure is known
+                    // Download URLs look like: .../o/path%2Fto%2Ffile?alt=media...
+                    // But we can also get the ref directly if they are stored in a predictable way
+                    // Alternatively, we can use the URL directly in ref(storage, url) which works in newer Firebase JS SDK
+                    const storageRef = ref(storage, url);
+                    await deleteObject(storageRef);
+                    console.log("✅ Media deleted from storage");
+                } catch (stErr) {
+                    console.warn("⚠️ Failed to delete media from storage (it might already be gone):", stErr.message);
+                }
+            }
+        }
+
+        await deleteDoc(messageRef);
+        console.log("✅ Message deleted from Firestore!");
+    } catch (error) {
+        console.error("❌ Error deleting message:", error);
+        throw error;
     }
 };

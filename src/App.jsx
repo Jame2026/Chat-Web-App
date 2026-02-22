@@ -7,15 +7,17 @@ import UserSettingsModal from './components/UserSettingsModal';
 import ProfileModal from './components/ProfileModal';
 import UsersModal from './components/UsersModal';
 import CreateGroupModal from './components/CreateGroupModal';
+import GroupMembersModal from './components/GroupMembersModal';
+import ImageEditorModal from './components/ImageEditorModal';
 import Auth from './components/Auth';
 import { motion, AnimatePresence } from 'framer-motion';
 import './App.css';
 
 import { auth, db, storage } from './firebase';
 import { onAuthStateChanged, updateProfile } from 'firebase/auth';
-import { doc, onSnapshot, setDoc, updateDoc, writeBatch, collection, getDocs, query, where, serverTimestamp, addDoc, orderBy } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL, uploadBytesResumable } from 'firebase/storage';
-import { sendMessage, subscribeToMessages, subscribeToUsers, toggleReaction, editMessage, setSharedTheme, subscribeToSharedTheme, subscribeToAllMessages, markAsSeen, toggleBlockUser } from './services/firebaseService';
+import { doc, onSnapshot, setDoc, updateDoc, writeBatch, collection, getDocs, query, where, serverTimestamp, addDoc } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL, uploadBytesResumable, deleteObject } from 'firebase/storage';
+import { sendMessage, subscribeToMessages, subscribeToUsers, toggleReaction, editMessage, setSharedTheme, subscribeToSharedTheme, subscribeToAllMessages, markAsSeen, toggleBlockUser, kickUserFromGroup, leaveGroup, updateGroupMetadata, deleteMessage } from './services/firebaseService';
 import { Bell } from 'lucide-react';
 import { useRef, useMemo } from 'react';
 
@@ -45,6 +47,8 @@ function App() {
   const [users, setUsers] = useState([]);
   const [activeNotification, setActiveNotification] = useState(null);
   const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
+  const [isGroupMembersOpen, setIsGroupMembersOpen] = useState(false);
+  const [groupMembersTab, setGroupMembersTab] = useState('members');
   const [channels, setChannels] = useState([]);
   const sessionStartTime = useRef(Date.now());
 
@@ -315,7 +319,14 @@ function App() {
   }, []);
 
   const handleViewProfile = (userObj) => {
-    const isMe = !userObj ||
+    if (!userObj) return;
+
+    // Safety guard: Don't open profile for channels/groups
+    if (userObj.type === 'channel') {
+      return;
+    }
+
+    const isMe =
       (userObj.uid === currentUser?.uid) ||
       (userObj.id === currentUser?.uid) ||
       (userObj === currentUser);
@@ -354,6 +365,59 @@ function App() {
       setMobileView('chat');
     } catch (error) {
       console.error("Error creating group:", error);
+      throw error;
+    }
+  };
+
+  const handleKickUser = async (userId) => {
+    if (!activeChannel) return;
+    try {
+      await kickUserFromGroup(activeChannel, userId);
+    } catch (error) {
+      console.error("Error kicking user:", error);
+      alert("Failed to kick user.");
+    }
+  };
+
+  const handleLeaveGroup = async () => {
+    if (!activeChannel || !currentUser) return;
+    try {
+      await leaveGroup(activeChannel, currentUser.uid);
+      setActiveChannel(null);
+      setMobileView('list');
+    } catch (error) {
+      console.error("Error leaving group:", error);
+      alert("Failed to leave group.");
+    }
+  };
+
+  const handleUpdateGroup = async (groupId, updateData) => {
+    try {
+      let finalUpdate = { ...updateData };
+
+      // Handle photo upload if a file is provided
+      if (updateData.photoFile) {
+        const file = updateData.photoFile;
+        let compressedBlob;
+        try {
+          compressedBlob = await compressImage(file);
+        } catch {
+          compressedBlob = file;
+        }
+
+        const fileName = `group_photo_${Date.now()}.jpg`;
+        const storageRef = ref(storage, `groups/${groupId}/${fileName}`);
+        const uploadTask = await uploadBytes(storageRef, compressedBlob);
+        const downloadURL = await getDownloadURL(uploadTask.ref);
+
+        finalUpdate.photoURL = downloadURL;
+        delete finalUpdate.photoFile;
+      }
+
+      await updateGroupMetadata(groupId, finalUpdate);
+    } catch (error) {
+      console.error("Error updating group:", error);
+      alert("Failed to update group information.");
       throw error;
     }
   };
@@ -669,6 +733,16 @@ function App() {
     await editMessage(messageId, newText);
   };
 
+  const handleDeleteMessage = async (messageId) => {
+    if (!currentUser) return;
+    try {
+      await deleteMessage(messageId);
+    } catch (error) {
+      console.error("Error deleting message:", error);
+      alert("Failed to delete message.");
+    }
+  };
+
   const handleToggleBlock = async (targetUserId) => {
     if (!currentUser || !targetUserId) return;
     const isCurrentlyBlocked = blockedUsers.includes(targetUserId);
@@ -700,15 +774,38 @@ function App() {
   const handleClearChat = async () => {
     if (!currentUser) return;
     const conversationId = activeChannel || (activeUser ? [currentUser.uid, activeUser].sort().join('_') : 'general');
-    if (!window.confirm("Clear all messages?")) return;
+    if (!window.confirm("Clear all messages? This will also remove images and voice notes from the database.")) return;
     try {
       const q = query(collection(db, 'messages'), where('conversationId', '==', conversationId));
       const snapshot = await getDocs(q);
+
+      const storageDeletions = [];
       const batch = writeBatch(db);
-      snapshot.docs.forEach((doc) => batch.delete(doc.ref));
+
+      snapshot.docs.forEach((doc) => {
+        const data = doc.data();
+
+        // Collect storage files to delete
+        const mediaURLs = [data.imageURL, data.voiceURL, data.videoURL].filter(url => !!url);
+        mediaURLs.forEach(url => {
+          try {
+            const storageRef = ref(storage, url);
+            storageDeletions.push(deleteObject(storageRef).catch(e => console.warn("Storage deletion failed:", e)));
+          } catch (e) { console.warn(e); }
+        });
+
+        batch.delete(doc.ref);
+      });
+
+      // Execute storage deletions first (or concurrently)
+      if (storageDeletions.length > 0) {
+        await Promise.all(storageDeletions);
+      }
+
       await batch.commit();
       setMessages([]);
-    } catch (error) { console.error(error); }
+      console.log("✅ Chat cleared thoroughly (Firestore + Storage)");
+    } catch (error) { console.error("Error clearing chat:", error); }
   };
 
   const handleLogout = async () => {
@@ -797,12 +894,13 @@ function App() {
           onToggleBlock={() => handleToggleBlock(activeUser)}
           onOpenUserSettings={() => setIsUserSettingsOpen(true)}
           themeColor={currentSharedTheme?.themeColor || userSettings[activeUser]?.themeColor}
-          wallpaper={currentSharedTheme?.wallpaper || userSettings[activeUser]?.wallpaper || userWallpaper}
-          onDeleteMessage={() => { }}
+          wallpaper={activeChannel ? currentConversation?.wallpaper : (currentSharedTheme?.wallpaper !== undefined ? currentSharedTheme.wallpaper : (userSettings[activeUser]?.wallpaper !== undefined ? userSettings[activeUser]?.wallpaper : userWallpaper))}
+          onDeleteMessage={handleDeleteMessage}
           onReaction={handleReaction}
           onEditMessage={handleEditMessage}
           onClearChat={handleClearChat}
           onViewProfile={() => handleViewProfile(currentConversation)}
+          onOpenGroupMembers={(tab = 'members') => { setGroupMembersTab(tab); setIsGroupMembersOpen(true); }}
           currentUserId={currentUser.uid}
         />
         }
@@ -871,7 +969,18 @@ function App() {
         users={users}
         currentUser={currentUser}
         onCreateGroup={handleCreateGroup}
-        theme={theme}
+      />
+
+      <GroupMembersModal
+        isOpen={isGroupMembersOpen}
+        onClose={() => setIsGroupMembersOpen(false)}
+        group={channels.find(c => c.id === activeChannel)}
+        users={users}
+        currentUser={currentUser}
+        onKickUser={handleKickUser}
+        onLeaveGroup={handleLeaveGroup}
+        onUpdateGroup={handleUpdateGroup}
+        initialTab={groupMembersTab}
       />
 
       <AnimatePresence>

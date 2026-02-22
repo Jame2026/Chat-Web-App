@@ -4,7 +4,6 @@ import { Search, Plus, Hash, User, Users, Settings as SettingsIcon } from 'lucid
 
 const Sidebar = ({ channels, users, activeChannel, activeUser, onSelectUser, onOpenSettings, onOpenProfile, blockedUsers, userSettings, userName, userPhotoURL, userStatus, onOpenDirectory, onSelectChannel, onCreateGroup }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [hoveredUserId, setHoveredUserId] = useState(null);
 
   const filteredUsers = users.filter(user => {
     const nickname = userSettings[user.id]?.nickname || '';
@@ -152,16 +151,17 @@ const Sidebar = ({ channels, users, activeChannel, activeUser, onSelectUser, onO
                 width: 'var(--avatar-size-lg)',
                 height: 'var(--avatar-size-lg)',
                 borderRadius: '50%',
-                background: 'var(--accent-color)',
+                background: channel.photoURL ? `url("${channel.photoURL}") center/cover` : (channel.themeColor || 'var(--accent-color)'),
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: 'white',
                 fontSize: '18px',
                 fontWeight: '600',
-                flexShrink: 0
+                flexShrink: 0,
+                boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
               }}>
-                <Users size={20} />
+                {!channel.photoURL && (channel.name ? channel.name.charAt(0).toUpperCase() : <Users size={20} />)}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -186,8 +186,8 @@ const Sidebar = ({ channels, users, activeChannel, activeUser, onSelectUser, onO
             <div
               key={user.id}
               onClick={() => onSelectUser(user.id)}
-              onMouseEnter={() => setHoveredUserId(user.id)}
-              onMouseLeave={() => setHoveredUserId(null)}
+              onMouseEnter={() => { }}
+              onMouseLeave={() => { }}
               style={{
                 display: 'flex',
                 alignItems: 'center',

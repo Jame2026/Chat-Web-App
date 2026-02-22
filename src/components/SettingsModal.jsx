@@ -3,8 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Moon, Sun, Camera, Check, LogOut, Settings, User as UserIcon, Type, FileText, Circle, Smile, Image as ImageIcon, ExternalLink, MapPin, Instagram, Github, Facebook, Link as LinkIcon, Send } from 'lucide-react';
 import EmojiPicker from 'emoji-picker-react';
-import Cropper from 'react-easy-crop';
-import getCroppedImg from '../utils/cropImage';
+import ImageEditorModal from './ImageEditorModal';
 
 const SettingsModal = ({
     isOpen,
@@ -44,9 +43,6 @@ const SettingsModal = ({
     const [pendingWallpaper, setPendingWallpaper] = useState(userWallpaper || '');
     const [showEmojiPicker, setShowEmojiPicker] = useState(null);
     const [isSavingAll, setIsSavingAll] = useState(false);
-    const [crop, setCrop] = useState({ x: 0, y: 0 });
-    const [zoom, setZoom] = useState(1);
-    const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
     const [croppingImage, setCroppingImage] = useState(null); // The source image for the cropper
 
     const fileInputRef = useRef(null);
@@ -69,7 +65,7 @@ const SettingsModal = ({
             setIsSavingAll(false);
             setCroppingImage(null);
         }
-    }, [isOpen, user, userBio, currentStatus, userWallpaper]);
+    }, [isOpen, user, userBio, currentStatus, userWallpaper, userLocation, userInstagram, userTelegram, userLink, userFacebook]);
 
     // Handle clicking outside emoji picker
     useEffect(() => {
@@ -147,22 +143,6 @@ const SettingsModal = ({
         // Reset input value so the same file can be selected again if needed
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
-        }
-    };
-
-    const onCropComplete = (croppedArea, croppedAreaPixels) => {
-        setCroppedAreaPixels(croppedAreaPixels);
-    };
-
-    const handleApplyCrop = async () => {
-        try {
-            const croppedBlob = await getCroppedImg(croppingImage, croppedAreaPixels);
-            const previewUrl = URL.createObjectURL(croppedBlob);
-            setLocalPreview(previewUrl);
-            setPendingFile(croppedBlob);
-            setCroppingImage(null);
-        } catch (e) {
-            console.error(e);
         }
     };
 
@@ -408,14 +388,6 @@ const SettingsModal = ({
                                     transition: 'all 0.2s',
                                     width: '100%'
                                 }}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.background = 'var(--accent-color)';
-                                    e.currentTarget.style.color = 'white';
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.background = 'rgba(var(--accent-color-rgb), 0.1)';
-                                    e.currentTarget.style.color = 'var(--accent-color)';
-                                }}
                             >
                                 <ExternalLink size={16} />
                                 Preview My Profile Card
@@ -542,27 +514,58 @@ const SettingsModal = ({
                             </div>
 
                             <div>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '12px' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '14px' }}>
                                     <ImageIcon size={12} /> Chat Wallpaper
                                 </label>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px' }}>
                                     {[
-                                        { id: 'none', v: '' },
-                                        { id: 'sunset', v: 'linear-gradient(135deg, #ff9a9e 0%, #fad0c4 99%)' },
-                                        { id: 'ocean', v: 'linear-gradient(120deg, #a1c4fd 0%, #c2e9fb 100%)' },
-                                        { id: 'midnight', v: 'linear-gradient(to top, #30cfd0 0%, #330867 100%)' }
+                                        { id: 'none', label: 'Default', v: '' },
+                                        { id: 'sunset', label: 'Sunset', v: 'linear-gradient(135deg, #ff9a9e 0%, #fad0c4 99%, #fad0c4 100%)' },
+                                        { id: 'ocean', label: 'Ocean', v: 'linear-gradient(120deg, #a1c4fd 0%, #c2e9fb 100%)' },
+                                        { id: 'midnight', label: 'Midnight', v: 'linear-gradient(to top, #30cfd0 0%, #330867 100%)' },
+                                        { id: 'lush', label: 'Lush', v: 'linear-gradient(to top, #d299c2 0%, #fef9d7 100%)' },
+                                        { id: 'royal', label: 'Royal', v: 'linear-gradient(to right, #6a11cb 0%, #2575fc 100%)' },
+                                        { id: 'rose', label: 'Rose', v: 'linear-gradient(to top, #f43b47 0%, #453a94 100%)' },
+                                        { id: 'cosmic', label: 'Cosmic', v: 'linear-gradient(to top, #09203f 0%, #537895 100%)' },
+                                        { id: 'sky', label: 'Sky', v: 'linear-gradient(to top, #4facfe 0%, #00f2fe 100%)' },
+                                        { id: 'aurora', label: 'Aurora', v: 'linear-gradient(to top, #43e97b 0%, #38f9d7 100%)' }
                                     ].map(wp => (
-                                        <button
+                                        <motion.button
                                             key={wp.id}
+                                            whileHover={{ scale: 1.05 }}
+                                            whileTap={{ scale: 0.95 }}
                                             onClick={() => setPendingWallpaper(wp.v)}
                                             style={{
-                                                aspectRatio: '1', borderRadius: '8px', background: wp.v || 'var(--bg-tertiary)',
-                                                border: pendingWallpaper === wp.v ? '2px solid var(--accent-color)' : '1px solid var(--border-color)',
-                                                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                                aspectRatio: '2/3',
+                                                borderRadius: '10px',
+                                                background: wp.v || 'var(--bg-tertiary)',
+                                                border: pendingWallpaper === wp.v ? '3px solid var(--accent-color)' : '2px solid var(--border-color)',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                padding: 0,
+                                                position: 'relative',
+                                                overflow: 'hidden',
+                                                transition: 'all 0.2s'
                                             }}
+                                            title={wp.label}
                                         >
-                                            {pendingWallpaper === wp.v && <Check size={16} color={wp.v ? 'white' : 'var(--accent-color)'} />}
-                                        </button>
+                                            {pendingWallpaper === wp.v && (
+                                                <div style={{
+                                                    position: 'absolute',
+                                                    top: '4px',
+                                                    right: '4px',
+                                                    background: 'var(--accent-color)',
+                                                    borderRadius: '50%',
+                                                    padding: '2px',
+                                                    display: 'flex',
+                                                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                                                }}>
+                                                    <Check size={10} color="white" />
+                                                </div>
+                                            )}
+                                        </motion.button>
                                     ))}
                                 </div>
                             </div>
@@ -653,112 +656,21 @@ const SettingsModal = ({
                         </button>
                     </div>
                 </motion.div>
-            </div>
 
-            {/* Image Cropper Overlay */}
-            <AnimatePresence>
-                {croppingImage && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        style={{
-                            position: 'fixed',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            backgroundColor: 'black',
-                            zIndex: 3000,
-                            display: 'flex',
-                            flexDirection: 'column'
-                        }}
-                    >
-                        <div style={{ position: 'relative', flex: 1, backgroundColor: '#111' }}>
-                            <Cropper
-                                image={croppingImage}
-                                crop={crop}
-                                zoom={zoom}
-                                aspect={1}
-                                onCropChange={setCrop}
-                                onCropComplete={onCropComplete}
-                                onZoomChange={setZoom}
-                                cropShape="round"
-                                showGrid={false}
-                            />
-                        </div>
-                        <motion.div
-                            initial={{ y: 100 }}
-                            animate={{ y: 0 }}
-                            style={{
-                                padding: '40px 20px',
-                                backgroundColor: 'var(--bg-secondary)',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '20px',
-                                alignItems: 'center',
-                                borderTop: '1px solid var(--border-color)',
-                                borderTopLeftRadius: '32px',
-                                borderTopRightRadius: '32px'
-                            }}
-                        >
-                            <div style={{ width: '100%', maxWidth: '300px' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                                    <span style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-secondary)' }}>ZOOM</span>
-                                    <span style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--accent-color)' }}>{Math.round(zoom * 100)}%</span>
-                                </div>
-                                <input
-                                    type="range"
-                                    value={zoom}
-                                    min={1}
-                                    max={3}
-                                    step={0.1}
-                                    aria-labelledby="Zoom"
-                                    onChange={(e) => setZoom(parseFloat(e.target.value))}
-                                    style={{
-                                        width: '100%',
-                                        accentColor: 'var(--accent-color)',
-                                        cursor: 'pointer'
-                                    }}
-                                />
-                            </div>
-                            <div style={{ display: 'flex', gap: '12px', width: '100%', maxWidth: '300px' }}>
-                                <button
-                                    onClick={() => setCroppingImage(null)}
-                                    style={{
-                                        flex: 1,
-                                        padding: '14px',
-                                        borderRadius: '16px',
-                                        backgroundColor: 'rgba(255,255,255,0.05)',
-                                        color: 'white',
-                                        border: '1px solid var(--border-color)',
-                                        fontWeight: 'bold',
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={handleApplyCrop}
-                                    style={{
-                                        flex: 2,
-                                        padding: '14px',
-                                        borderRadius: '16px',
-                                        backgroundColor: 'var(--accent-color)',
-                                        color: 'white',
-                                        border: 'none',
-                                        fontWeight: 'bold',
-                                        cursor: 'pointer',
-                                        boxShadow: '0 10px 20px rgba(var(--accent-color-rgb), 0.3)'
-                                    }}
-                                >
-                                    Apply & Save
-                                </button>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+                <ImageEditorModal
+                    isOpen={!!croppingImage}
+                    image={croppingImage}
+                    aspect={1}
+                    shape="round"
+                    onCancel={() => setCroppingImage(null)}
+                    onSave={async (blob) => {
+                        const previewUrl = URL.createObjectURL(blob);
+                        setLocalPreview(previewUrl);
+                        setPendingFile(blob);
+                        setCroppingImage(null);
+                    }}
+                />
+            </div>
         </AnimatePresence>
     );
 };
