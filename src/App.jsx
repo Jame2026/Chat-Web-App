@@ -17,7 +17,7 @@ import { auth, db, storage } from './firebase';
 import { onAuthStateChanged, updateProfile } from 'firebase/auth';
 import { doc, onSnapshot, setDoc, updateDoc, writeBatch, collection, getDocs, query, where, serverTimestamp, addDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, uploadBytesResumable, deleteObject } from 'firebase/storage';
-import { sendMessage, subscribeToMessages, subscribeToUsers, toggleReaction, editMessage, setSharedTheme, subscribeToSharedTheme, subscribeToAllMessages, markAsSeen, toggleBlockUser, kickUserFromGroup, addMemberToGroup, leaveGroup, updateGroupMetadata, deleteMessage } from './services/firebaseService';
+import { sendMessage, subscribeToMessages, subscribeToUsers, toggleReaction, editMessage, setSharedTheme, subscribeToSharedTheme, subscribeToAllMessages, markAsSeen, toggleBlockUser, kickUserFromGroup, addMemberToGroup, leaveGroup, updateGroupMetadata, deleteMessage, subscribeToLastMessages } from './services/firebaseService';
 import { Bell } from 'lucide-react';
 import { useRef, useMemo } from 'react';
 
@@ -51,6 +51,7 @@ function App() {
   const [groupMembersTab, setGroupMembersTab] = useState('members');
   const [channels, setChannels] = useState([]);
   const sessionStartTime = useRef(Date.now());
+  const [lastMessages, setLastMessages] = useState({});
 
   useEffect(() => {
     if (currentUser) {
@@ -194,6 +195,14 @@ function App() {
   useEffect(() => {
     if (currentUser) {
       const unsubscribe = subscribeToUsers(setUsers);
+      return () => unsubscribe();
+    }
+  }, [currentUser]);
+
+  // Subscribe to last messages per conversation for sidebar sorting
+  useEffect(() => {
+    if (currentUser) {
+      const unsubscribe = subscribeToLastMessages(currentUser.uid, setLastMessages);
       return () => unsubscribe();
     }
   }, [currentUser]);
@@ -878,6 +887,8 @@ function App() {
           userStatus={userStatus}
           onOpenDirectory={() => setIsUsersDirectoryOpen(true)}
           onCreateGroup={() => setIsCreateGroupOpen(true)}
+          lastMessages={lastMessages}
+          currentUserId={currentUser.uid}
         />
       </div>
 

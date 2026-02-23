@@ -1001,7 +1001,7 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
                                                                             ? `Seen by ${msg.seenByUsers.map(u => u.displayName || u.name || 'User').join(', ')}`
                                                                             : 'Seen')
                                                                         : 'Sent'}>
-                                                                        {/* Show double-green tick only on the last seen message, single tick otherwise */}
+                                                                        {/* Show double-green tick only on the last seen message */}
                                                                         {(msg.isSeen && (lastSeenMsgIds.has(msg.id) || msg.id === lastSeenMsgId1on1)) ? (
                                                                             <div style={{ display: 'flex' }}>
                                                                                 <Check size={12} color="#4ade80" />
@@ -1014,8 +1014,8 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
                                                                 )}
                                                             </div>
 
-                                                            {/* Seen Portraits — only render on the last message each viewer has read */}
-                                                            {isMe && lastSeenMsgIds.has(msg.id) && (
+                                                            {/* Seen Portraits — only on the last message each viewer has read */}
+                                                            {isMe && (lastSeenMsgIds.has(msg.id) || (msg.id === lastSeenMsgId1on1 && activeConversation.type === 'user')) && (
                                                                 <div style={{
                                                                     position: 'absolute',
                                                                     bottom: '-10px',
@@ -1026,41 +1026,47 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
                                                                     gap: '0',
                                                                     zIndex: 10
                                                                 }}>
-                                                                    {/* Filter to only viewers whose last-seen message is THIS message */}
+                                                                    {/* Filter portraits: only viewers whose last-seen is THIS message */}
                                                                     {(msg.seenByUsers && msg.seenByUsers.length > 0
-                                                                        ? msg.seenByUsers.filter(u => lastSeenMsgIdPerViewer.get(u.uid || u.id) === msg.id)
-                                                                        : [])
-                                                                        .slice(0, 5).map((u, idx) => (
-                                                                            <motion.div
-                                                                                key={u.uid || idx}
-                                                                                initial={{ opacity: 0, scale: 0.5 }}
-                                                                                animate={{ opacity: 1, scale: 1 }}
-                                                                                whileHover={{ scale: 1.2, zIndex: 20 }}
-                                                                                title={`Seen by ${u.displayName || u.name || 'Unknown User'}`}
-                                                                                style={{
-                                                                                    width: '18px',
-                                                                                    height: '18px',
-                                                                                    borderRadius: '50%',
-                                                                                    backgroundImage: (u.photoURL) ? `url("${u.photoURL}")` : 'none',
-                                                                                    backgroundColor: u.themeColor || 'var(--accent-color)',
-                                                                                    backgroundSize: 'cover',
-                                                                                    backgroundPosition: 'center',
-                                                                                    display: 'flex',
-                                                                                    alignItems: 'center',
-                                                                                    justifyContent: 'center',
-                                                                                    fontSize: '9px',
-                                                                                    fontWeight: '800',
-                                                                                    color: 'white',
-                                                                                    boxShadow: '0 2px 4px rgba(0,0,0,0.4)',
-                                                                                    border: '2px solid var(--bg-primary)',
-                                                                                    marginLeft: idx > 0 ? '-6px' : '0', // Overlap
-                                                                                    cursor: 'help',
-                                                                                    zIndex: 10 - idx
-                                                                                }}
-                                                                            >
-                                                                                {!u.photoURL && (u.displayName || u.name || '?').charAt(0).toUpperCase()}
-                                                                            </motion.div>
-                                                                        ))}
+                                                                        ? msg.seenByUsers.filter(u => {
+                                                                            const uid = u.uid || u.id;
+                                                                            return lastSeenMsgIdPerViewer.get(uid) === msg.id;
+                                                                        })
+                                                                        // 1-on-1 fallback: show the other person's avatar
+                                                                        : (msg.id === lastSeenMsgId1on1 && activeConversation.type === 'user'
+                                                                            ? [{ uid: activeConversation.id, photoURL: activeConversation.photoURL, displayName: activeConversation.nickname || activeConversation.name, themeColor: activeConversation.themeColor }]
+                                                                            : [])
+                                                                    ).slice(0, 5).map((u, idx) => (
+                                                                        <motion.div
+                                                                            key={u.uid || idx}
+                                                                            initial={{ opacity: 0, scale: 0.5 }}
+                                                                            animate={{ opacity: 1, scale: 1 }}
+                                                                            whileHover={{ scale: 1.2, zIndex: 20 }}
+                                                                            title={`Seen by ${u.displayName || u.name || 'Unknown User'}`}
+                                                                            style={{
+                                                                                width: '18px',
+                                                                                height: '18px',
+                                                                                borderRadius: '50%',
+                                                                                backgroundImage: (u.photoURL) ? `url("${u.photoURL}")` : 'none',
+                                                                                backgroundColor: u.themeColor || 'var(--accent-color)',
+                                                                                backgroundSize: 'cover',
+                                                                                backgroundPosition: 'center',
+                                                                                display: 'flex',
+                                                                                alignItems: 'center',
+                                                                                justifyContent: 'center',
+                                                                                fontSize: '9px',
+                                                                                fontWeight: '800',
+                                                                                color: 'white',
+                                                                                boxShadow: '0 2px 4px rgba(0,0,0,0.4)',
+                                                                                border: '2px solid var(--bg-primary)',
+                                                                                marginLeft: idx > 0 ? '-6px' : '0', // Overlap
+                                                                                cursor: 'help',
+                                                                                zIndex: 10 - idx
+                                                                            }}
+                                                                        >
+                                                                            {!u.photoURL && (u.displayName || u.name || '?').charAt(0).toUpperCase()}
+                                                                        </motion.div>
+                                                                    ))}
                                                                     {msg.seenByUsers && msg.seenByUsers.length > 5 && (
                                                                         <div style={{
                                                                             fontSize: '9px',

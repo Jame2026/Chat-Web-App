@@ -182,6 +182,46 @@ export const subscribeToSharedTheme = (conversationId, callback) => {
     });
 };
 /**
+ * Subscribes to the latest message for every conversation the user is part of.
+ * Returns a map: { [conversationId]: { text, createdAt, senderId, senderName } }
+ * Works for both 1-on-1 chats (convId = uid1_uid2) and groups (convId = Firestore doc ID).
+ */
+export const subscribeToLastMessages = (currentUserId, callback) => {
+    if (!currentUserId) return () => { };
+
+    // Query the most recent messages across all conversations.
+    // We collect the newest message per conversationId in JS.
+    // The Sidebar already filters to only render conversations the user belongs to,
+    // so extra convIds in this map are harmless.
+    const q = query(
+        collection(db, MESSAGES_COLLECTION),
+        orderBy("createdAt", "desc"),
+        limit(300)
+    );
+
+    return onSnapshot(q, (snapshot) => {
+        const latestPerConv = {};
+        snapshot.docs.forEach(docSnap => {
+            const data = docSnap.data();
+            const convId = data.conversationId;
+            if (!convId) return;
+            // Keep only the first (newest) message per conversation
+            if (!latestPerConv[convId]) {
+                latestPerConv[convId] = {
+                    text: data.text || (data.imageURL ? '📷 Image' : data.voiceURL ? '🎤 Voice message' : data.videoURL ? '🎥 Video' : ''),
+                    createdAt: data.createdAt,
+                    senderId: data.senderId,
+                    senderName: data.senderName,
+                };
+            }
+        });
+        callback(latestPerConv);
+    }, (error) => {
+        console.error("❌ Error in subscribeToLastMessages:", error);
+    });
+};
+
+/**
  * Listen for any new messages (system-wide) for notifications
  */
 export const subscribeToAllMessages = (callback) => {
