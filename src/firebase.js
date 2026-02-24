@@ -6,7 +6,7 @@ import { getStorage } from "firebase/storage";
 // TODO: Replace with your actual Firebase config from the Firebase Console
 const firebaseConfig = {
     apiKey: "AIzaSyCCtm8gDJ9N9MWA1GoQepJV8vY-68FxDrY",
-    authDomain: "chat-app-ac3c1.firebaseapp.com",
+    authDomain: "soloproject.store",
     projectId: "chat-app-ac3c1",
     storageBucket: "chat-app-ac3c1.firebasestorage.app",
     messagingSenderId: "854410747474",
