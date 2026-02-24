@@ -10,6 +10,7 @@ import CreateGroupModal from './components/CreateGroupModal';
 import GroupMembersModal from './components/GroupMembersModal';
 import ImageEditorModal from './components/ImageEditorModal';
 import Auth from './components/Auth';
+import ResetPasswordHandler from './components/ResetPasswordHandler';
 import { motion, AnimatePresence } from 'framer-motion';
 import './App.css';
 
@@ -847,6 +848,15 @@ function App() {
   }, [users]);
 
   if (authLoading) return <div className="loading-screen">Loading Chat...</div>;
+
+  // Manual routing for Firebase Auth Actions (e.g. Reset Password)
+  const urlParams = new URLSearchParams(window.location.search);
+  const isResetMode = urlParams.get('mode') === 'resetPassword';
+
+  if (isResetMode) {
+    return <ResetPasswordHandler theme={theme} />;
+  }
+
   if (!currentUser) return <Auth onAuthSuccess={() => { }} theme={theme} />;
 
   const currentConversation = activeChannel

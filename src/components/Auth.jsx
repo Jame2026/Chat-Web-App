@@ -4,11 +4,14 @@ import {
     createUserWithEmailAndPassword,
     signInWithEmailAndPassword,
     signInWithPopup,
-    updateProfile
+    updateProfile,
+    sendPasswordResetEmail,
+    sendEmailVerification,
+    signOut
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Lock, User, AtSign, ArrowRight, Github } from 'lucide-react';
+import { Mail, Lock, User, AtSign, ArrowRight, ArrowLeft, Github, Check, ShieldAlert, Loader2, LogIn, UserPlus } from 'lucide-react';
 
 const Auth = ({ onAuthSuccess, theme }) => {
     const [isLogin, setIsLogin] = useState(true);
@@ -16,7 +19,20 @@ const Auth = ({ onAuthSuccess, theme }) => {
     const [password, setPassword] = useState('');
     const [displayName, setDisplayName] = useState('');
     const [error, setError] = useState('');
+    const [message, setMessage] = useState('');
     const [loading, setLoading] = useState(false);
+    const [isForgotMode, setIsForgotMode] = useState(false);
+    const [resendTimer, setResendTimer] = useState(0);
+
+    React.useEffect(() => {
+        let interval;
+        if (resendTimer > 0) {
+            interval = setInterval(() => {
+                setResendTimer(prev => prev - 1);
+            }, 1000);
+        }
+        return () => clearInterval(interval);
+    }, [resendTimer]);
 
     const handleGoogleLogin = async () => {
         setLoading(true);
@@ -88,12 +104,43 @@ const Auth = ({ onAuthSuccess, theme }) => {
         }
     };
 
+    const handleForgotPassword = async (e) => {
+        if (e) e.preventDefault();
+        if (!email) {
+            setError('Please enter your email address first.');
+            return;
+        }
+
+        setLoading(true);
+        setError('');
+        setMessage('');
+
+        console.log("Attempting to send password reset email to:", email);
+
+        try {
+            await sendPasswordResetEmail(auth, email);
+            console.log("✅ Password reset email request sent successfully.");
+            setMessage('Password reset email sent! Please check your inbox and spam folder.');
+        } catch (err) {
+            console.error("❌ Firebase Password Reset Error:", err);
+            setError(err.message.replace('Firebase:', '').trim());
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleResendVerification = async () => {
+        // This feature is now disabled as per user request for instant login
+        return;
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
         setLoading(true);
 
         try {
+            setMessage('');
             if (isLogin) {
                 await signInWithEmailAndPassword(auth, email, password);
             } else {
@@ -134,18 +181,32 @@ const Auth = ({ onAuthSuccess, theme }) => {
                 transition={{ duration: 0.6, ease: "easeOut" }}
                 className="auth-card"
             >
-                <div className="auth-header">
-                    <div className="brand-badge">
-                        <AtSign size={18} />
-                        <span>Chat Messenger</span>
+                {loading && (
+                    <div className="card-loading-overlay">
+                        <Loader2 className="spinner" size={40} />
                     </div>
-                    <h1>{isLogin ? 'Welcome Back' : 'Create Account'}</h1>
-                    <p>{isLogin ? 'Sign in to continue your conversations' : 'Join thousands of users in our community'}</p>
+                )}
+                <div className="auth-header">
+                    <div className="brand-badge-row">
+                        <div className="brand-badge">
+                            <AtSign size={16} />
+                            <span>Chat Messenger</span>
+                        </div>
+                    </div>
+                    <h1>
+                        {isForgotMode ? 'Reset Password' : (isLogin ? 'Welcome Back' : 'Create Account')}
+                    </h1>
+                    <p>
+                        {isForgotMode
+                            ? 'Enter the email associated with your account to receive a reset link'
+                            : (isLogin ? 'Sign in to continue your conversations' : 'Join thousands of users in our community')
+                        }
+                    </p>
                 </div>
 
-                <form onSubmit={handleSubmit} className="auth-form">
+                <form onSubmit={isForgotMode ? handleForgotPassword : handleSubmit} className="auth-form">
                     <AnimatePresence mode="wait">
-                        {!isLogin && (
+                        {!isLogin && !isForgotMode && (
                             <motion.div
                                 key="name-field"
                                 initial={{ opacity: 0, height: 0 }}
@@ -180,39 +241,76 @@ const Auth = ({ onAuthSuccess, theme }) => {
                         </div>
                     </div>
 
-                    <div className="input-field-wrapper">
-                        <div className="input-group">
-                            <Lock className="input-icon" size={18} />
-                            <input
-                                type="password"
-                                placeholder="Password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                required
-                            />
+                    {!isForgotMode && (
+                        <div className="input-field-wrapper">
+                            <div className="input-group">
+                                <Lock className="input-icon" size={18} />
+                                <input
+                                    type="password"
+                                    placeholder="Password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    required={!isForgotMode}
+                                />
+                            </div>
                         </div>
-                    </div>
+                    )}
+
+                    {isLogin && !isForgotMode && (
+                        <div className="forgot-password-wrapper">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setIsForgotMode(true);
+                                    setError('');
+                                    setMessage('');
+                                }}
+                                className="forgot-password-link"
+                                disabled={loading}
+                            >
+                                Forgot Password?
+                            </button>
+                        </div>
+                    )}
 
                     <AnimatePresence>
                         {error && (
                             <motion.div
                                 initial={{ opacity: 0, scale: 0.95 }}
                                 animate={{ opacity: 1, scale: 1 }}
-                                className="auth-error"
+                                className="auth-error-container"
                             >
-                                {error}
+                                <div className="auth-error">
+                                    <ShieldAlert size={16} />
+                                    <span>{error}</span>
+                                </div>
+                            </motion.div>
+                        )}
+                        {message && (
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className="auth-message"
+                            >
+                                <Check size={16} />
+                                <span>{message}</span>
                             </motion.div>
                         )}
                     </AnimatePresence>
 
                     <button type="submit" className="auth-submit" disabled={loading}>
-                        <span>{loading ? 'Processing...' : (isLogin ? 'Sign In' : 'Get Started')}</span>
+                        <span>
+                            {loading
+                                ? 'Processing...'
+                                : (isForgotMode ? 'Send Reset Link' : (isLogin ? 'Sign In' : 'Get Started'))
+                            }
+                        </span>
                         {!loading && <ArrowRight size={18} />}
                     </button>
                 </form>
 
                 <div className="auth-divider">
-                    <span>Social Login</span>
+                    <span>{isForgotMode ? "Or sign in with" : "Social Login"}</span>
                 </div>
 
                 <div className="social-grid">
@@ -227,10 +325,25 @@ const Auth = ({ onAuthSuccess, theme }) => {
                 </div>
 
                 <div className="auth-footer">
-                    <span>{isLogin ? "Don't have an account?" : "Already member?"}</span>
-                    <button onClick={() => setIsLogin(!isLogin)} className="toggle-auth">
-                        {isLogin ? 'Create one now' : 'Sign in here'}
-                    </button>
+                    {isForgotMode ? (
+                        <button
+                            onClick={() => {
+                                setIsForgotMode(false);
+                                setError('');
+                                setMessage('');
+                            }}
+                            className="toggle-auth"
+                        >
+                            Back to Login
+                        </button>
+                    ) : (
+                        <>
+                            <span>{isLogin ? "Don't have an account?" : "Already member?"}</span>
+                            <button onClick={() => setIsLogin(!isLogin)} className="toggle-auth">
+                                {isLogin ? 'Create one now' : 'Sign in here'}
+                            </button>
+                        </>
+                    )}
                 </div>
             </motion.div>
 
@@ -323,7 +436,7 @@ const Auth = ({ onAuthSuccess, theme }) => {
                 }
                 .input-group input {
                     width: 100%; padding: 14px 14px 14px 48px;
-                    background: rgba(47, 49, 54, 0.4);
+                    background: rgba(20, 20, 25, 0.6);
                     border: 1px solid rgba(255, 255, 255, 0.05);
                     border-radius: 16px;
                     color: white; outline: none;
@@ -331,11 +444,33 @@ const Auth = ({ onAuthSuccess, theme }) => {
                     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
                 }
                 .input-group input:focus {
-                    background: rgba(47, 49, 54, 0.8);
+                    background: rgba(20, 20, 25, 0.9);
                     border-color: #5865f2;
                     box-shadow: 0 0 0 4px rgba(88, 101, 242, 0.15);
                 }
                 .input-group input:focus + .input-icon { color: #5865f2; }
+
+                .forgot-password-wrapper {
+                    display: flex;
+                    justify-content: flex-end;
+                    margin: -8px 0 24px;
+                }
+                .forgot-password-link {
+                    background: none;
+                    border: none;
+                    color: #64748b;
+                    font-size: 13px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    padding: 0;
+                    opacity: 0.8;
+                }
+                .forgot-password-link:hover {
+                    color: #5865f2;
+                    opacity: 1;
+                    text-decoration: underline;
+                }
 
                 .auth-submit {
                     width: 100%; padding: 16px;
@@ -420,9 +555,9 @@ const Auth = ({ onAuthSuccess, theme }) => {
                 }
                 
                 .light .auth-container { background: #f8fafc; }
-                .light .auth-card { background: rgba(255, 255, 255, 0.8); border-color: #e2e8f0; box-shadow: 0 20px 40px rgba(0,0,0,0.05); }
-                .light .auth-header h1 { color: #0f172a; }
-                .light .auth-header p { color: #64748b; }
+                .light .auth-card { background: rgba(21, 21, 21, 0.5); border-color: #262626ff; box-shadow: 0 20px 40px rgba(0,0,0,0.05); }
+                .light .auth-header h1 { color: #f3f4f6ff; }
+                .light .auth-header p { color: #c4c5c7ff; }
                 .light .input-group input { background: #ffffff; border-color: #e2e8f0; color: #0f172a; }
                 .light .social-btn { background: #ffffff; border-color: #e2e8f0; color: #0f172a; }
                 .light .blob-1 { background: #bfdbfe; }
