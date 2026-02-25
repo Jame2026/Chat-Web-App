@@ -267,6 +267,12 @@ function App() {
     };
   }, [activeChannel, activeUser, currentUser]);
 
+  // Track current chat ID in a ref for the notification listener to avoid re-subscription
+  const activeChatIdRef = useRef(null);
+  useEffect(() => {
+    activeChatIdRef.current = activeChannel || (activeUser ? [currentUser?.uid, activeUser].sort().join('_') : null);
+  }, [activeChannel, activeUser, currentUser]);
+
   useEffect(() => {
     let unsubscribe = () => { };
     if (!currentUser) return;
@@ -281,50 +287,60 @@ function App() {
   }, [activeChannel, activeUser, currentUser]);
 
   // Global Notification Listener
+  const usersRef = useRef(users);
+  useEffect(() => { usersRef.current = users; }, [users]);
+
   useEffect(() => {
-    if (currentUser) {
-      if (Notification.permission === 'default') Notification.requestPermission();
+    if (!currentUser) return;
+    if (Notification.permission === 'default') Notification.requestPermission();
 
-      const unsubscribe = subscribeToAllMessages((msg) => {
-        if (msg.senderId === currentUser.uid) return;
-        const isPrivateForMe = msg.conversationId.includes(currentUser.uid);
-        const isPublicChannel = ['general', 'random', 'design', 'development'].includes(msg.conversationId);
-        if (!isPrivateForMe && !isPublicChannel) return;
+    const unsubscribe = subscribeToAllMessages((msg) => {
+      // 1. Ignore my own messages
+      if (msg.senderId === currentUser.uid) return;
 
-        const msgTime = msg.createdAt?.toDate ? msg.createdAt.toDate().getTime() : Date.now();
-        if (msgTime < sessionStartTime.current - 2000) return;
+      // 2. Ignore if already seen by me
+      if (msg.seenBy && msg.seenBy.includes(currentUser.uid)) return;
 
-        const currentChatId = activeChannel || (activeUser ? [currentUser.uid, activeUser].sort().join('_') : null);
-        if (msg.conversationId === currentChatId && document.visibilityState === 'visible') return;
+      // 3. Filter for relevant conversations (private or public channels)
+      const isPrivateForMe = msg.conversationId.includes(currentUser.uid);
+      const isPublicChannel = ['general', 'random', 'design', 'development'].includes(msg.conversationId);
+      if (!isPrivateForMe && !isPublicChannel) return;
 
-        const sender = users.find(u => u.uid === msg.senderId);
-        const senderName = sender?.displayName || sender?.email?.split('@')[0] || 'Someone';
+      // 4. Ignore old messages from previous sessions
+      const msgTime = msg.createdAt?.toDate ? msg.createdAt.toDate().getTime() : Date.now();
+      if (msgTime < sessionStartTime.current - 2000) return;
 
-        setActiveNotification({
-          ...msg,
-          senderName,
-          senderPhoto: sender?.photoURL
+      // 5. DO NOT alert if we are currently looking at this conversation
+      if (msg.conversationId === activeChatIdRef.current && document.visibilityState === 'visible') return;
+
+      const sender = usersRef.current.find(u => u.uid === msg.senderId);
+      const senderName = sender?.displayName || sender?.email?.split('@')[0] || 'Someone';
+
+      setActiveNotification({
+        ...msg,
+        senderName,
+        senderPhoto: sender?.photoURL
+      });
+
+      setTimeout(() => setActiveNotification(null), 5000);
+
+      if (document.visibilityState === 'hidden' && Notification.permission === 'granted') {
+        const systemNotif = new Notification(`New message from ${senderName}`, {
+          body: msg.text || "📷 Sent an image",
+          icon: sender?.photoURL || '/logo192.png',
+          tag: msg.senderId
         });
 
-        setTimeout(() => setActiveNotification(null), 5000);
+        systemNotif.onclick = () => {
+          window.focus();
+          handleSelectUser(msg.senderId);
+          systemNotif.close();
+        };
+      }
+    });
 
-        if (document.visibilityState === 'hidden' && Notification.permission === 'granted') {
-          const systemNotif = new Notification(`New message from ${senderName}`, {
-            body: msg.text || "📷 Sent an image",
-            icon: sender?.photoURL || '/logo192.png',
-            tag: msg.senderId
-          });
-
-          systemNotif.onclick = () => {
-            window.focus();
-            handleSelectUser(msg.senderId);
-            systemNotif.close();
-          };
-        }
-      });
-      return () => unsubscribe();
-    }
-  }, [currentUser, users, activeChannel, activeUser]);
+    return () => unsubscribe();
+  }, [currentUser]); // Only depends on currentUser to prevent re-subscription on chat switch
 
   useEffect(() => {
     const handleResize = () => {
@@ -790,12 +806,14 @@ function App() {
     setActiveChannel(id);
     setActiveUser(null);
     setMobileView('chat');
+    setActiveNotification(null); // Clear notification toast when switching
   };
 
   const handleSelectUser = (id) => {
     setActiveUser(id);
     setActiveChannel(null);
     setMobileView('chat');
+    setActiveNotification(null); // Clear notification toast when switching
   };
 
   const handleClearChat = async () => {
