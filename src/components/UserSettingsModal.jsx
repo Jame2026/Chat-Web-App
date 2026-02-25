@@ -184,8 +184,25 @@ const UserSettingsModal = ({ isOpen, onClose, user, onUpdateSettings, theme, isB
                                     border: '4px solid var(--bg-secondary)',
                                 }} title={user.online ? "Online" : "Offline"} />
                             </motion.div>
-                            <h3 style={{ fontSize: '20px', fontWeight: '800', marginBottom: '4px' }}>{user.name}</h3>
-                            <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Member since Jan 2024</p>
+                            <h3 style={{ fontSize: '20px', fontWeight: '800', marginBottom: '4px' }}>{user.nickname || user.displayName || user.name}</h3>
+                            <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                                {user.joinedAt ? (() => {
+                                    const date = user.joinedAt.toDate ? user.joinedAt.toDate() : new Date(user.joinedAt.seconds * 1000);
+                                    const day = date.getDate();
+                                    const month = date.toLocaleDateString(undefined, { month: 'short' });
+                                    const year = date.getFullYear();
+                                    const getOrdinal = (d) => {
+                                        if (d > 3 && d < 21) return 'th';
+                                        switch (d % 10) {
+                                            case 1: return "st";
+                                            case 2: return "nd";
+                                            case 3: return "rd";
+                                            default: return "th";
+                                        }
+                                    };
+                                    return `Member since ${day}${getOrdinal(day)}, ${month} ${year}`;
+                                })() : 'Member since Jan 2024'}
+                            </p>
                         </div>
 
                         {/* Nickname Input */}

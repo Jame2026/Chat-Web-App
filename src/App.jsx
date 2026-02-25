@@ -52,6 +52,7 @@ function App() {
   const [channels, setChannels] = useState([]);
   const sessionStartTime = useRef(Date.now());
   const [lastMessages, setLastMessages] = useState({});
+  const [userJoinedAt, setUserJoinedAt] = useState(null);
 
   useEffect(() => {
     if (currentUser) {
@@ -87,6 +88,7 @@ function App() {
         if (data.status) setUserStatus(data.status);
         if (data.wallpaper) setUserWallpaper(data.wallpaper);
         if (data.blockedUsers) setBlockedUsers(data.blockedUsers);
+        if (data.joinedAt) setUserJoinedAt(data.joinedAt);
       }
     });
     return () => unsubscribe();
@@ -376,7 +378,8 @@ function App() {
         phone: userPhone,
         linkedin: userLinkedin,
         link: userLink,
-        facebook: userFacebook
+        facebook: userFacebook,
+        joinedAt: userJoinedAt
       });
     } else {
       setProfileUser(userObj);

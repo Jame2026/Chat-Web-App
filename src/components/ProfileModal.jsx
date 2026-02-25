@@ -21,10 +21,38 @@ const ProfileModal = ({ isOpen, onClose, user, isCurrentUser, onOpenSettings, is
     const statusColor = statusColors[user.status] || 'var(--success-color)';
 
     // Mock data for the profile
+    // Format the joined date
+    const getJoinedDisplay = () => {
+        if (isGroup) {
+            return user.createdAt?.seconds
+                ? `Created ${new Date(user.createdAt.seconds * 1000).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}`
+                : 'Recently Created';
+        }
+
+        if (user.joinedAt) {
+            const date = user.joinedAt.toDate ? user.joinedAt.toDate() : new Date(user.joinedAt.seconds * 1000);
+            const day = date.getDate();
+            const month = date.toLocaleDateString(undefined, { month: 'short' });
+            const year = date.getFullYear();
+
+            const getOrdinal = (d) => {
+                if (d > 3 && d < 21) return 'th';
+                switch (d % 10) {
+                    case 1: return "st";
+                    case 2: return "nd";
+                    case 3: return "rd";
+                    default: return "th";
+                }
+            };
+
+            return `Joined ${day}${getOrdinal(day)}, ${month} ${year}`;
+        }
+
+        return user.joinedDate || 'Joined Jan 2024';
+    };
+
     const profileInfo = {
-        joined: user.joinedDate || (isGroup ?
-            (user.createdAt?.seconds ? `Created ${new Date(user.createdAt.seconds * 1000).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}` : 'Recently Created')
-            : 'Joined Jan 2024'),
+        joined: getJoinedDisplay(),
         location: user.location || 'Unknown Location',
         bio: user.bio || (isGroup ? user.description : `Passionate about creating amazing digital experiences. Let's build something great!`),
         phone: user.phone,

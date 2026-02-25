@@ -52,7 +52,8 @@ const Auth = ({ onAuthSuccess, theme }) => {
                 email: user.email,
                 photoURL: photoToUse,
                 online: true,
-                lastSeen: serverTimestamp()
+                lastSeen: serverTimestamp(),
+                joinedAt: existingData.joinedAt || serverTimestamp()
             }, { merge: true });
 
             console.log("🔄 Social Login - Photo source:", photoToUse === user.photoURL ? "Google" : "Database (Manual)");
@@ -85,7 +86,8 @@ const Auth = ({ onAuthSuccess, theme }) => {
                 email: user.email,
                 photoURL: photoToUse,
                 online: true,
-                lastSeen: serverTimestamp()
+                lastSeen: serverTimestamp(),
+                joinedAt: existingData.joinedAt || serverTimestamp()
             }, { merge: true });
 
             console.log("🔄 Github Login - Photo source:", photoToUse === user.photoURL ? "Github" : "Database (Manual)");
@@ -150,7 +152,8 @@ const Auth = ({ onAuthSuccess, theme }) => {
                     email,
                     photoURL: '',
                     online: true,
-                    lastSeen: serverTimestamp()
+                    lastSeen: serverTimestamp(),
+                    joinedAt: serverTimestamp()
                 });
             }
             onAuthSuccess();
