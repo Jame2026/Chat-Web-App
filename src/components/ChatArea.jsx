@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Send, FileText, Smile, MoreHorizontal, ArrowLeft, Trash2, User, Users, Pencil, Check, X as CloseIcon, Mic, Play, Pause, Volume2, Clock, Shield, Settings } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import EmojiPicker from 'emoji-picker-react';
-import ImageEditorModal from './ImageEditorModal';
+
 
 const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, isBlocked, isBlockedByThem, onToggleBlock, onOpenUserSettings, themeColor, wallpaper, onReaction, onEditMessage, onDeleteMessage, onClearChat, onViewProfile, currentUserId, onOpenGroupMembers }) => {
     const [inputValue, setInputValue] = useState('');
@@ -30,8 +30,7 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
     const [showSchedule, setShowSchedule] = useState(false);
     const [scheduledDate, setScheduledDate] = useState('');
     const [currentTime, setCurrentTime] = useState(Date.now());
-    const [imageForEditing, setImageForEditing] = useState(null);
-    const [isImageEditorOpen, setIsImageEditorOpen] = useState(false);
+
 
 
 
@@ -150,37 +149,20 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
         if (e.key === 'Escape') cancelEditing();
     };
 
-    const handleFileChange = (e) => {
+    const handleFileChange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => {
-            setImageForEditing(reader.result);
-            setIsImageEditorOpen(true);
-        };
-        e.target.value = ''; // Reset input
-    };
-
-    const handleSaveEditedImage = async (blob) => {
-        setIsImageEditorOpen(false);
         setIsUploading(true);
         try {
-            const file = new File([blob], "image.jpg", { type: "image/jpeg" });
             await onSendMessage("", file);
         } catch (error) {
             console.error("Error uploading file:", error);
-            alert("Failed to send image");
+            alert("Failed to send file");
         } finally {
             setIsUploading(false);
-            setImageForEditing(null);
         }
-    };
-
-    const handleCancelEdit = () => {
-        setIsImageEditorOpen(false);
-        setImageForEditing(null);
+        e.target.value = ''; // Reset input
     };
 
     const startRecording = async () => {
@@ -1680,14 +1662,7 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
                         </div>
                     )}
             </div>
-            <ImageEditorModal
-                isOpen={isImageEditorOpen}
-                image={imageForEditing}
-                aspect={4 / 3}
-                shape="rect"
-                onCancel={handleCancelEdit}
-                onSave={handleSaveEditedImage}
-            />
+
         </div >
     );
 };

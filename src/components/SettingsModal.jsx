@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Moon, Sun, Camera, Check, LogOut, Settings, User as UserIcon, Type, FileText, Circle, Smile, Image as ImageIcon, ExternalLink, MapPin, Instagram, Github, Facebook, Link as LinkIcon, Send } from 'lucide-react';
 import EmojiPicker from 'emoji-picker-react';
-import ImageEditorModal from './ImageEditorModal';
+
 
 const SettingsModal = ({
     isOpen,
@@ -43,7 +43,7 @@ const SettingsModal = ({
     const [pendingWallpaper, setPendingWallpaper] = useState(userWallpaper || '');
     const [showEmojiPicker, setShowEmojiPicker] = useState(null);
     const [isSavingAll, setIsSavingAll] = useState(false);
-    const [croppingImage, setCroppingImage] = useState(null); // The source image for the cropper
+
 
     const fileInputRef = useRef(null);
     const emojiPickerRef = useRef(null);
@@ -63,7 +63,7 @@ const SettingsModal = ({
             setLocalPreview(null);
             setPendingFile(null);
             setIsSavingAll(false);
-            setCroppingImage(null);
+
         }
     }, [isOpen, user, userBio, currentStatus, userWallpaper, userLocation, userInstagram, userTelegram, userLink, userFacebook]);
 
@@ -137,7 +137,8 @@ const SettingsModal = ({
             const reader = new FileReader();
             reader.readAsDataURL(file);
             reader.onload = () => {
-                setCroppingImage(reader.result);
+                setLocalPreview(reader.result);
+                setPendingFile(file);
             };
         }
         // Reset input value so the same file can be selected again if needed
@@ -675,19 +676,7 @@ const SettingsModal = ({
                     </div>
                 </motion.div>
 
-                <ImageEditorModal
-                    isOpen={!!croppingImage}
-                    image={croppingImage}
-                    aspect={1}
-                    shape="round"
-                    onCancel={() => setCroppingImage(null)}
-                    onSave={async (blob) => {
-                        const previewUrl = URL.createObjectURL(blob);
-                        setLocalPreview(previewUrl);
-                        setPendingFile(blob);
-                        setCroppingImage(null);
-                    }}
-                />
+
             </div>
         </AnimatePresence>
     );

@@ -22,7 +22,7 @@ const ResetPasswordHandler = ({ theme }) => {
                     setEmail(email);
                     setIsVerified(true);
                 })
-                .catch((err) => {
+                .catch(() => {
                     setError('This link is invalid or has expired. Please request a new password reset link.');
                 });
         } else {

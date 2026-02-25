@@ -5,9 +5,7 @@ import {
     signInWithEmailAndPassword,
     signInWithPopup,
     updateProfile,
-    sendPasswordResetEmail,
-    sendEmailVerification,
-    signOut
+    sendPasswordResetEmail
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -129,10 +127,7 @@ const Auth = ({ onAuthSuccess, theme }) => {
         }
     };
 
-    const handleResendVerification = async () => {
-        // This feature is now disabled as per user request for instant login
-        return;
-    };
+
 
     const handleSubmit = async (e) => {
         e.preventDefault();

@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, UserMinus, LogOut, Crown, Settings, Users, Camera, Check, Image as ImageIcon, Search, UserPlus } from 'lucide-react';
-import ImageEditorModal from './ImageEditorModal';
+
 
 const GroupMembersModal = ({ isOpen, onClose, group, users, currentUser, onKickUser, onAddMember, onLeaveGroup, onUpdateGroup, initialTab = 'members' }) => {
     const [activeTab, setActiveTab] = useState(initialTab);
@@ -12,8 +12,7 @@ const GroupMembersModal = ({ isOpen, onClose, group, users, currentUser, onKickU
     const [selectedWallpaper, setSelectedWallpaper] = useState(group?.wallpaper || '');
     const [photoFile, setPhotoFile] = useState(null);
     const [previewPhoto, setPreviewPhoto] = useState(null);
-    const [imageForEditing, setImageForEditing] = useState(null);
-    const [isImageEditorOpen, setIsImageEditorOpen] = useState(false);
+
     const fileInputRef = useRef(null);
 
     // Sync state when group changes or modal opens
@@ -59,26 +58,9 @@ const GroupMembersModal = ({ isOpen, onClose, group, users, currentUser, onKickU
         const file = e.target.files[0];
         if (!file) return;
 
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            setImageForEditing(reader.result);
-            setIsImageEditorOpen(true);
-        };
-        reader.readAsDataURL(file);
-        e.target.value = ''; // Reset input
-    };
-
-    const handleSaveEditedPhoto = (blob) => {
-        const file = new File([blob], "group_photo.jpg", { type: "image/jpeg" });
         setPhotoFile(file);
-        setPreviewPhoto(URL.createObjectURL(blob));
-        setIsImageEditorOpen(false);
-        setImageForEditing(null);
-    };
-
-    const handleCancelEdit = () => {
-        setIsImageEditorOpen(false);
-        setImageForEditing(null);
+        setPreviewPhoto(URL.createObjectURL(file));
+        e.target.value = ''; // Reset input
     };
 
     const themeColors = [
@@ -721,14 +703,7 @@ const GroupMembersModal = ({ isOpen, onClose, group, users, currentUser, onKickU
                     </div>
                 </motion.div>
             </div>
-            <ImageEditorModal
-                isOpen={isImageEditorOpen}
-                image={imageForEditing}
-                aspect={1}
-                shape="round"
-                onCancel={handleCancelEdit}
-                onSave={handleSaveEditedPhoto}
-            />
+
         </AnimatePresence>
     );
 };
