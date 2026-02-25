@@ -14,6 +14,7 @@ import {
     arrayUnion,
     arrayRemove,
     limit,
+    limitToLast,
     deleteDoc
 } from "firebase/firestore";
 import { ref, deleteObject } from "firebase/storage";
@@ -55,11 +56,6 @@ export const sendMessage = async (conversationId, senderId, text, imageURL = nul
         console.log("✅ Saved! ID:", docRef.id);
     } catch (error) {
         console.error("❌ Firestore Write Error:", error.code, error.message);
-        if (error.code === 'permission-denied') {
-            alert("SECURITY ERROR: Firebase is still blocking you. Please double-check your 'Rules' tab and click 'Publish'!");
-        } else {
-            alert("Error: " + error.message);
-        }
         throw error; // Rethrow so the caller knows it failed
     }
 };
@@ -248,15 +244,17 @@ export const markAsSeen = async (conversationId, currentUserId) => {
     if (!conversationId || !currentUserId) return;
 
     try {
+        // Simplify query to avoid index requirements while troubleshooting
         const q = query(
             collection(db, MESSAGES_COLLECTION),
-            where("conversationId", "==", conversationId),
-            orderBy("createdAt", "desc"),
-            limit(40) // Only mark recent messages as seen
+            where("conversationId", "==", conversationId)
         );
 
         const snapshot = await getDocs(q);
-        const updatePromises = snapshot.docs
+        // Sort manually and take last 100 to avoid index issues
+        const sortedDocs = snapshot.docs.sort((a, b) => (b.data().createdAt?.toMillis() || 0) - (a.data().createdAt?.toMillis() || 0)).slice(0, 100);
+
+        const updatePromises = sortedDocs
             .filter(doc => {
                 const data = doc.data();
                 return data.senderId !== currentUserId && (!data.seenBy || !data.seenBy.includes(currentUserId));

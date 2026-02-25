@@ -8,7 +8,6 @@ import ProfileModal from './components/ProfileModal';
 import UsersModal from './components/UsersModal';
 import CreateGroupModal from './components/CreateGroupModal';
 import GroupMembersModal from './components/GroupMembersModal';
-import ImageEditorModal from './components/ImageEditorModal';
 import Auth from './components/Auth';
 import ResetPasswordHandler from './components/ResetPasswordHandler';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -257,9 +256,14 @@ function App() {
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     document.addEventListener('mousedown', handleClick);
+    document.addEventListener('touchstart', handleClick); // For mobile/touch
+    window.addEventListener('focus', handleVisibilityChange);
+
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       document.removeEventListener('mousedown', handleClick);
+      document.removeEventListener('touchstart', handleClick);
+      window.removeEventListener('focus', handleVisibilityChange);
     };
   }, [activeChannel, activeUser, currentUser]);
 
@@ -913,7 +917,7 @@ function App() {
 
             // Map seenBy IDs to user objects for the UI
             let seenByUserObjects = (m.seenBy || [])
-              .filter(uid => uid !== m.senderId) // Only show others who seen it
+              .filter(uid => uid !== m.senderId && uid !== currentUser.uid) // Only show OTHERS who seen it
               .map(uid => usersMap[uid] || { uid, name: 'User', displayName: 'User', photoURL: null });
 
             // Fallback for 1-on-1: If status is seen but array is empty, show the recipient's portrait

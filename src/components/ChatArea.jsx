@@ -735,7 +735,7 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
                             const lastSeenMsgIdPerViewer = new Map();
                             for (let i = messages.length - 1; i >= 0; i--) {
                                 const m = messages[i];
-                                if (m.senderId !== currentUserId) continue;
+                                // We now calculate this for ALL messages to see who read what in group chats
                                 const viewers = m.seenByUsers || [];
                                 viewers.forEach(u => {
                                     const uid = u.uid || u.id;
@@ -983,8 +983,8 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
                                                                             ? `Seen by ${msg.seenByUsers.map(u => u.displayName || u.name || 'User').join(', ')}`
                                                                             : 'Seen')
                                                                         : 'Sent'}>
-                                                                        {/* Show double-green tick only on the last seen message */}
-                                                                        {(msg.isSeen && (lastSeenMsgIds.has(msg.id) || msg.id === lastSeenMsgId1on1)) ? (
+                                                                        {/* Show double-green ticks for ANY seen message */}
+                                                                        {msg.isSeen ? (
                                                                             <div style={{ display: 'flex' }}>
                                                                                 <Check size={12} color="#4ade80" />
                                                                                 <Check size={12} color="#4ade80" style={{ marginLeft: '-8px' }} />
