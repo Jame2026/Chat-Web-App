@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Phone, Calendar, MapPin, Instagram, Facebook, Link as LinkIcon, Send, MessageCircle, Heart, User, ExternalLink, Settings, Shield } from 'lucide-react';
+import { X, Phone, Calendar, MapPin, Instagram, Facebook, Link as LinkIcon, Send, MessageCircle, Heart, User, ExternalLink, Settings, Shield, Linkedin } from 'lucide-react';
 
 const ProfileModal = ({ isOpen, onClose, user, isCurrentUser, onOpenSettings, isBlocked, onToggleBlock }) => {
     const [viewFullPhoto, setViewFullPhoto] = useState(false);
@@ -22,12 +22,13 @@ const ProfileModal = ({ isOpen, onClose, user, isCurrentUser, onOpenSettings, is
 
     // Mock data for the profile
     const profileInfo = {
-        phone: user.phone || '+1 (555) 001-2024',
         joined: user.joinedDate || (isGroup ?
             (user.createdAt?.seconds ? `Created ${new Date(user.createdAt.seconds * 1000).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}` : 'Recently Created')
             : 'Joined Jan 2024'),
         location: user.location || 'Unknown Location',
         bio: user.bio || (isGroup ? user.description : `Passionate about creating amazing digital experiences. Let's build something great!`),
+        phone: user.phone,
+        linkedin: user.linkedin,
         instagram: user.instagram,
         telegram: user.telegram,
         link: user.link,
@@ -230,38 +231,47 @@ const ProfileModal = ({ isOpen, onClose, user, isCurrentUser, onOpenSettings, is
                                     <span>{profileInfo.location}</span>
                                 </div>
 
-                                {/* Social Icons */}
-                                <div style={{
-                                    display: 'flex',
-                                    gap: '16px',
-                                    marginTop: '8px',
-                                    paddingTop: '16px',
-                                    borderTop: '1px solid rgba(255,255,255,0.05)'
-                                }}>
-                                    {profileInfo.instagram && (
-                                        <a href={`https://instagram.com/${profileInfo.instagram}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-secondary)', transition: 'color 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.color = '#E1306C'} onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}>
-                                            <Instagram size={18} />
+                                {profileInfo.phone && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px', fontSize: '14px', fontWeight: '500' }}>
+                                        <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            <Phone size={16} color={accentColor} />
+                                        </div>
+                                        <span>{profileInfo.phone}</span>
+                                    </div>
+                                )}
+
+                                {profileInfo.facebook && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px', fontSize: '14px', fontWeight: '500' }}>
+                                        <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            <Facebook size={16} color={accentColor} />
+                                        </div>
+                                        <a href={profileInfo.facebook.startsWith('http') ? profileInfo.facebook : `https://facebook.com/${profileInfo.facebook}`} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>
+                                            Facebook Profile
                                         </a>
-                                    )}
-                                    {profileInfo.telegram && (
-                                        <a href={`https://t.me/${profileInfo.telegram}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-secondary)', transition: 'color 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.color = '#0088cc'} onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}>
-                                            <Send size={18} />
+                                    </div>
+                                )}
+
+                                {profileInfo.linkedin && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px', fontSize: '14px', fontWeight: '500' }}>
+                                        <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            <Linkedin size={16} color={accentColor} />
+                                        </div>
+                                        <a href={profileInfo.linkedin.startsWith('http') ? profileInfo.linkedin : `https://linkedin.com/in/${profileInfo.linkedin}`} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>
+                                            LinkedIn Profile
                                         </a>
-                                    )}
-                                    {profileInfo.facebook && (
-                                        <a href={profileInfo.facebook.startsWith('http') ? profileInfo.facebook : `https://facebook.com/${profileInfo.facebook}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-secondary)', transition: 'color 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.color = '#1877F2'} onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}>
-                                            <Facebook size={18} />
+                                    </div>
+                                )}
+
+                                {profileInfo.link && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px', fontSize: '14px', fontWeight: '500' }}>
+                                        <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            <LinkIcon size={16} color={accentColor} />
+                                        </div>
+                                        <a href={profileInfo.link.startsWith('http') ? profileInfo.link : `https://${profileInfo.link}`} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>
+                                            {profileInfo.link.replace(/^https?:\/\//, '').split('/')[0] || 'Personal Link'}
                                         </a>
-                                    )}
-                                    {profileInfo.link && (
-                                        <a href={profileInfo.link.startsWith('http') ? profileInfo.link : `https://${profileInfo.link}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-secondary)', transition: 'color 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.color = 'var(--accent-color)'} onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}>
-                                            <LinkIcon size={18} />
-                                        </a>
-                                    )}
-                                    {!profileInfo.instagram && !profileInfo.telegram && !profileInfo.facebook && !profileInfo.link && (
-                                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontStyle: 'italic' }}>No social links connected</span>
-                                    )}
-                                </div>
+                                    </div>
+                                )}
                             </div>
                         )}
 

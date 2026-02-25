@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Moon, Sun, Camera, Check, LogOut, Settings, User as UserIcon, Type, FileText, Circle, Smile, Image as ImageIcon, ExternalLink, MapPin, Instagram, Github, Facebook, Link as LinkIcon, Send } from 'lucide-react';
+import { X, Moon, Sun, Camera, Check, LogOut, Settings, User as UserIcon, Type, FileText, Circle, Smile, Image as ImageIcon, ExternalLink, MapPin, Instagram, Github, Facebook, Link as LinkIcon, Send, Phone, Linkedin } from 'lucide-react';
 import EmojiPicker from 'emoji-picker-react';
 
 
@@ -23,8 +23,8 @@ const SettingsModal = ({
     userWallpaper,
     onUpdateWallpaper,
     userLocation,
-    userInstagram,
-    userTelegram,
+    userPhone,
+    userLinkedin,
     userLink,
     userFacebook,
     onUpdateSocials
@@ -33,8 +33,8 @@ const SettingsModal = ({
     const [newName, setNewName] = useState('');
     const [newBio, setNewBio] = useState('');
     const [location, setLocation] = useState('');
-    const [instagram, setInstagram] = useState('');
-    const [telegram, setTelegram] = useState('');
+    const [phone, setPhone] = useState('');
+    const [linkedin, setLinkedin] = useState('');
     const [link, setLink] = useState('');
     const [facebook, setFacebook] = useState('');
     const [localPreview, setLocalPreview] = useState(null);
@@ -54,8 +54,8 @@ const SettingsModal = ({
             setNewName(user.displayName || '');
             setNewBio(userBio || '');
             setLocation(userLocation || '');
-            setInstagram(userInstagram || '');
-            setTelegram(userTelegram || '');
+            setPhone(userPhone || '');
+            setLinkedin(userLinkedin || '');
             setLink(userLink || '');
             setFacebook(userFacebook || '');
             setStatus(currentStatus || 'active');
@@ -65,7 +65,7 @@ const SettingsModal = ({
             setIsSavingAll(false);
 
         }
-    }, [isOpen, user, userBio, currentStatus, userWallpaper, userLocation, userInstagram, userTelegram, userLink, userFacebook]);
+    }, [isOpen, user, userBio, currentStatus, userWallpaper, userLocation, userPhone, userLinkedin, userLink, userFacebook]);
 
     // Handle clicking outside emoji picker
     useEffect(() => {
@@ -82,8 +82,8 @@ const SettingsModal = ({
         newName.trim() !== (user?.displayName || '') ||
         newBio.trim() !== (userBio || '') ||
         location.trim() !== (userLocation || '') ||
-        instagram.trim() !== (userInstagram || '') ||
-        telegram.trim() !== (userTelegram || '') ||
+        phone.trim() !== (userPhone || '') ||
+        linkedin.trim() !== (userLinkedin || '') ||
         link.trim() !== (userLink || '') ||
         facebook.trim() !== (userFacebook || '') ||
         status !== (currentStatus || 'active') ||
@@ -109,8 +109,8 @@ const SettingsModal = ({
 
             const socialsToUpdate = {};
             if (location.trim() !== (userLocation || '')) socialsToUpdate.location = location.trim();
-            if (instagram.trim() !== (userInstagram || '')) socialsToUpdate.instagram = instagram.trim();
-            if (telegram.trim() !== (userTelegram || '')) socialsToUpdate.telegram = telegram.trim();
+            if (phone.trim() !== (userPhone || '')) socialsToUpdate.phone = phone.trim();
+            if (linkedin.trim() !== (userLinkedin || '')) socialsToUpdate.linkedin = linkedin.trim();
             if (link.trim() !== (userLink || '')) socialsToUpdate.link = link.trim();
             if (facebook.trim() !== (userFacebook || '')) socialsToUpdate.facebook = facebook.trim();
 
@@ -382,8 +382,8 @@ const SettingsModal = ({
                                         displayName: newName,
                                         bio: newBio,
                                         location: location,
-                                        instagram: instagram,
-                                        telegram: telegram,
+                                        phone: phone,
+                                        linkedin: linkedin,
                                         link: link,
                                         facebook: facebook,
                                         photoURL: localPreview || userPhotoURL,
@@ -463,30 +463,30 @@ const SettingsModal = ({
                                 />
                             </div>
 
-                            {/* Instagram */}
+                            {/* Phone */}
                             <div style={{ position: 'relative' }}>
                                 <div style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }}>
-                                    <Instagram size={16} />
+                                    <Phone size={16} />
                                 </div>
                                 <input
                                     type="text"
-                                    value={instagram}
-                                    onChange={(e) => setInstagram(e.target.value)}
-                                    placeholder="Instagram Username"
+                                    value={phone}
+                                    onChange={(e) => setPhone(e.target.value)}
+                                    placeholder="Phone Number"
                                     style={{ width: '100%', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '12px 14px 12px 40px', color: 'var(--text-primary)', outline: 'none', height: '44px', fontSize: '13px' }}
                                 />
                             </div>
 
-                            {/* Telegram */}
+                            {/* LinkedIn */}
                             <div style={{ position: 'relative' }}>
                                 <div style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }}>
-                                    <Send size={16} />
+                                    <Linkedin size={16} />
                                 </div>
                                 <input
                                     type="text"
-                                    value={telegram}
-                                    onChange={(e) => setTelegram(e.target.value)}
-                                    placeholder="Telegram Username"
+                                    value={linkedin}
+                                    onChange={(e) => setLinkedin(e.target.value)}
+                                    placeholder="LinkedIn Profile URL"
                                     style={{ width: '100%', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '12px 14px 12px 40px', color: 'var(--text-primary)', outline: 'none', height: '44px', fontSize: '13px' }}
                                 />
                             </div>

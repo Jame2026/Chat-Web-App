@@ -14,7 +14,6 @@ import {
     arrayUnion,
     arrayRemove,
     limit,
-    limitToLast,
     deleteDoc
 } from "firebase/firestore";
 import { ref, deleteObject } from "firebase/storage";

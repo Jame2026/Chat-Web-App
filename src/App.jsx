@@ -32,8 +32,8 @@ function App() {
   const [userName, setUserName] = useState('');
   const [userBio, setUserBio] = useState('');
   const [userLocation, setUserLocation] = useState('');
-  const [userInstagram, setUserInstagram] = useState('');
-  const [userTelegram, setUserTelegram] = useState('');
+  const [userPhone, setUserPhone] = useState('');
+  const [userLinkedin, setUserLinkedin] = useState('');
   const [userLink, setUserLink] = useState('');
   const [userFacebook, setUserFacebook] = useState('');
   const [isUserSettingsOpen, setIsUserSettingsOpen] = useState(false);
@@ -80,8 +80,8 @@ function App() {
         setUserBio(data.bio || '');
         setUserPhotoURL(data.photoURL || currentUser.photoURL || '');
         setUserLocation(data.location || '');
-        setUserInstagram(data.instagram || '');
-        setUserTelegram(data.telegram || '');
+        setUserPhone(data.phone || '');
+        setUserLinkedin(data.linkedin || '');
         setUserLink(data.link || '');
         setUserFacebook(data.facebook || '');
         if (data.status) setUserStatus(data.status);
@@ -373,8 +373,8 @@ function App() {
         status: userStatus,
         wallpaper: userWallpaper,
         location: userLocation,
-        instagram: userInstagram,
-        telegram: userTelegram,
+        phone: userPhone,
+        linkedin: userLinkedin,
         link: userLink,
         facebook: userFacebook
       });
@@ -620,8 +620,8 @@ function App() {
     try {
       await updateDoc(doc(db, 'users', currentUser.uid), socials);
       if (socials.location !== undefined) setUserLocation(socials.location);
-      if (socials.instagram !== undefined) setUserInstagram(socials.instagram);
-      if (socials.telegram !== undefined) setUserTelegram(socials.telegram);
+      if (socials.phone !== undefined) setUserPhone(socials.phone);
+      if (socials.linkedin !== undefined) setUserLinkedin(socials.linkedin);
       if (socials.link !== undefined) setUserLink(socials.link);
       if (socials.facebook !== undefined) setUserFacebook(socials.facebook);
     } catch (error) { console.error("Error updating socials:", error); }
@@ -985,8 +985,8 @@ function App() {
         userBio={userBio}
         onUpdateBio={handleUpdateBio}
         userLocation={userLocation}
-        userInstagram={userInstagram}
-        userTelegram={userTelegram}
+        userPhone={userPhone}
+        userLinkedin={userLinkedin}
         userLink={userLink}
         userFacebook={userFacebook}
         onUpdateSocials={handleUpdateSocials}
