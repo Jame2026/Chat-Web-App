@@ -10,6 +10,8 @@ import CreateGroupModal from './components/CreateGroupModal';
 import GroupMembersModal from './components/GroupMembersModal';
 import Auth from './components/Auth';
 import ResetPasswordHandler from './components/ResetPasswordHandler';
+import StoryViewer from './components/StoryViewer';
+import { subscribeToStories } from './services/storyService';
 import { motion, AnimatePresence } from 'framer-motion';
 import './App.css';
 
@@ -53,6 +55,15 @@ function App() {
   const sessionStartTime = useRef(Date.now());
   const [lastMessages, setLastMessages] = useState({});
   const [userJoinedAt, setUserJoinedAt] = useState(null);
+  const [stories, setStories] = useState([]);
+  const [selectedStoryUser, setSelectedStoryUser] = useState(null);
+
+  useEffect(() => {
+    if (currentUser) {
+      const unsubscribe = subscribeToStories(setStories);
+      return () => unsubscribe();
+    }
+  }, [currentUser]);
 
   useEffect(() => {
     if (currentUser) {
@@ -924,6 +935,8 @@ function App() {
           onCreateGroup={() => setIsCreateGroupOpen(true)}
           lastMessages={lastMessages}
           currentUserId={currentUser.uid}
+          stories={stories}
+          onStoryClick={setSelectedStoryUser}
         />
       </div>
 
@@ -1093,6 +1106,15 @@ function App() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {selectedStoryUser && (
+        <StoryViewer
+          storyUser={selectedStoryUser}
+          onClose={() => setSelectedStoryUser(null)}
+          currentUserId={currentUser.uid}
+          users={users}
+        />
+      )}
     </div>
   );
 }

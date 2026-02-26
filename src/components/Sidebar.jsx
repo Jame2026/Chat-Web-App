@@ -1,13 +1,15 @@
 
 import React, { useState, useMemo } from 'react';
 import { Search, Plus, Users, Settings as SettingsIcon } from 'lucide-react';
+import StoryRow from './StoryRow';
 
 const Sidebar = ({
   channels, users, activeChannel, activeUser,
   onSelectUser, onOpenSettings, onOpenProfile,
   blockedUsers, userSettings, userName, userPhotoURL, userStatus,
   onOpenDirectory, onSelectChannel, onCreateGroup,
-  lastMessages = {}, currentUserId
+  lastMessages = {}, currentUserId,
+  stories = [], onStoryClick
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -137,6 +139,14 @@ const Sidebar = ({
           />
         </div>
       </div>
+
+      <StoryRow
+        currentUser={{ uid: currentUserId, name: userName, photoURL: userPhotoURL }}
+        users={users}
+        stories={stories}
+        onStoryClick={onStoryClick}
+        userSettings={userSettings}
+      />
 
       {/* Combined Chat List */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '0 8px' }}>
