@@ -123,10 +123,15 @@
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.premium-bubble:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+@media (min-width: 769px) {
+  .premium-bubble:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+    animation: bubble-glow 2.5s infinite ease-in-out;
+  }
 }
+
+
 
 /* Cleanup unused animations */
 @keyframes shimmer {

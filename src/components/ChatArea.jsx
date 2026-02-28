@@ -853,16 +853,6 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
                                                 )}
                                                 <div
                                                     className={`premium-bubble ${isMe ? 'premium-bubble-me' : 'premium-bubble-other'}`}
-                                                    onMouseEnter={(e) => {
-                                                        e.currentTarget.style.transform = 'translateY(-1px)';
-                                                        e.currentTarget.style.boxShadow = '0 6px 15px rgba(0,0,0,0.15)';
-                                                        e.currentTarget.style.animation = 'bubble-glow 2.5s infinite ease-in-out';
-                                                    }}
-                                                    onMouseLeave={(e) => {
-                                                        e.currentTarget.style.transform = 'translateY(0)';
-                                                        e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
-                                                        e.currentTarget.style.animation = 'none';
-                                                    }}
                                                     style={{
                                                         padding: isMediaOnly ? '0' : '10px 14px',
                                                         borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
@@ -1158,11 +1148,13 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
                                             {/* Action Buttons (Pencil/Reactions) */}
                                             {hoveredMessageId === msg.id && (
                                                 <div style={{
+                                                    position: 'absolute',
+                                                    bottom: '0', // Align to the bottom part of the message
+                                                    [isMe ? 'right' : 'left']: 'calc(100% + 8px)', // Position cleanly on the outer side for all devices/media types
                                                     display: 'flex',
                                                     gap: '4px',
                                                     alignItems: 'center',
-                                                    marginTop: '-4px', // Bring buttons closer to bubble
-                                                    height: '24px' // Fixed height instead of padding
+                                                    zIndex: 50
                                                 }}>
                                                     {!isMe && (
                                                         <motion.div
@@ -1170,9 +1162,9 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
                                                             animate={{ opacity: 1, scale: 1, x: 0 }}
                                                             style={{
                                                                 display: 'flex',
-                                                                gap: '4px',
+                                                                gap: '2px', // Reduced gap between emojis
                                                                 backgroundColor: 'var(--bg-secondary)',
-                                                                padding: '4px 8px',
+                                                                padding: '3px 6px', // Reduced padding inside the pill
                                                                 borderRadius: '20px',
                                                                 boxShadow: '0 4px 15px rgba(0,0,0,0.15)',
                                                                 border: '1px solid var(--border-color)',
@@ -1186,7 +1178,7 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
                                                                     style={{
                                                                         background: 'none',
                                                                         border: 'none',
-                                                                        fontSize: '18px',
+                                                                        fontSize: '15px', // Reduced font size of emoji from 18px
                                                                         cursor: 'pointer',
                                                                         padding: '2px',
                                                                         transition: 'transform 0.1s',
@@ -1206,7 +1198,7 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
                                                                 style={{
                                                                     background: 'none',
                                                                     border: 'none',
-                                                                    fontSize: '16px',
+                                                                    fontSize: '14px', // Reduced size of the plus button
                                                                     cursor: 'pointer',
                                                                     padding: '2px',
                                                                     color: 'var(--text-secondary)',
