@@ -1,8 +1,8 @@
 import { db, storage } from '../firebase';
-import { collection, addDoc, serverTimestamp, query, where, onSnapshot, arrayUnion, updateDoc, doc, deleteDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, where, onSnapshot, arrayUnion, updateDoc, doc, deleteDoc, getDocs } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 
-export const uploadStory = (userId, file, onProgress) => {
+export const uploadStory = (userId, file, text = '', onProgress) => {
     return new Promise((resolve, reject) => {
         const storageRef = ref(storage, `stories/${userId}/${Date.now()}_${file.name}`);
         const uploadTask = uploadBytesResumable(storageRef, file);
@@ -24,6 +24,7 @@ export const uploadStory = (userId, file, onProgress) => {
                     const storyData = {
                         userId,
                         videoUrl: downloadURL,
+                        text,
                         storagePath: uploadTask.snapshot.ref.fullPath,
                         createdAt: serverTimestamp(),
                         expiresAt: expiresAt.getTime(), // Store as JS timestamp for easy querying
@@ -81,8 +82,12 @@ export const markStoryAsViewed = async (storyId, viewerId) => {
 export const deleteStory = async (storyId, storagePath) => {
     try {
         if (storagePath) {
-            const storageRef = ref(storage, storagePath);
-            await deleteObject(storageRef);
+            try {
+                const storageRef = ref(storage, storagePath);
+                await deleteObject(storageRef);
+            } catch (storageErr) {
+                console.warn("Storage deletion warning (file may not exist):", storageErr);
+            }
         }
         await deleteDoc(doc(db, 'stories', storyId));
     } catch (error) {
@@ -99,5 +104,30 @@ export const reactToStory = async (storyId, viewerId, emoji) => {
         });
     } catch (error) {
         console.error("Error reacting to story:", error);
+    }
+};
+
+export const cleanupExpiredStories = async (userId) => {
+    if (!userId) return;
+    try {
+        const now = Date.now();
+        const q = query(
+            collection(db, 'stories'),
+            where('userId', '==', userId),
+            where('expiresAt', '<=', now)
+        );
+
+        const snapshot = await getDocs(q);
+        const deletePromises = snapshot.docs.map(storyDoc => {
+            const data = storyDoc.data();
+            return deleteStory(storyDoc.id, data.storagePath);
+        });
+
+        if (deletePromises.length > 0) {
+            await Promise.all(deletePromises);
+            console.log(`Cleaned up ${deletePromises.length} expired stories for user ${userId}.`);
+        }
+    } catch (error) {
+        console.error("Error cleaning up expired stories:", error);
     }
 };

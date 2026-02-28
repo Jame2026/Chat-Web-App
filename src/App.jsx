@@ -11,7 +11,7 @@ import GroupMembersModal from './components/GroupMembersModal';
 import Auth from './components/Auth';
 import ResetPasswordHandler from './components/ResetPasswordHandler';
 import StoryViewer from './components/StoryViewer';
-import { subscribeToStories } from './services/storyService';
+import { subscribeToStories, cleanupExpiredStories } from './services/storyService';
 import { motion, AnimatePresence } from 'framer-motion';
 import './App.css';
 
@@ -117,6 +117,9 @@ function App() {
             online: true,
             lastSeen: serverTimestamp()
           });
+
+          // Automatically clean up this user's expired stories from DB and Storage
+          cleanupExpiredStories(user.uid);
         } catch (err) {
           console.error("Error updating online status:", err);
         }
@@ -867,6 +870,52 @@ function App() {
     } catch (error) { console.error("Error clearing chat:", error); }
   };
 
+  // eslint-disable-next-line no-unused-vars
+  const handleStoryReply = async (storyOwnerId, story, text, _thumbnail = null, voiceBlob = null, audioDuration = null) => {
+    if (!currentUser) return;
+    try {
+      const conversationId = [currentUser.uid, storyOwnerId].sort().join('_');
+      const currentUserSettings = userSettings[currentUser.uid] || {};
+      const senderMetadata = {
+        name: userName,
+        photoURL: userPhotoURL,
+        themeColor: currentUserSettings.themeColor || 'var(--accent-color)',
+        storyExpiresAt: story.expiresAt || null
+      };
+
+      let thumbnailURL = null;
+
+      let voiceURL = null;
+      if (voiceBlob) {
+        try {
+          const fileName = `story_voice_${Date.now()}_${currentUser.uid}.webm`;
+          const storageRef = ref(storage, `chat_audio/${conversationId}/${fileName}`);
+          const uploadTask = await uploadBytes(storageRef, voiceBlob);
+          voiceURL = await getDownloadURL(uploadTask.ref);
+        } catch (err) {
+          console.error("Failed to upload story voice:", err);
+        }
+      }
+
+      const replyPrefix = voiceBlob ? (text || "") : text;
+
+      await sendMessage(
+        conversationId,
+        currentUser.uid,
+        replyPrefix,
+        thumbnailURL,
+        voiceURL,
+        senderMetadata,
+        null, // scheduledDate
+        audioDuration,
+        story.videoUrl || story.url
+      );
+    } catch (error) {
+      console.error("Error sending story reply:", error);
+      alert("Failed to send reply.");
+    }
+  };
+
   const handleLogout = async () => {
     if (currentUser) {
       try {
@@ -1113,6 +1162,7 @@ function App() {
           onClose={() => setSelectedStoryUser(null)}
           currentUserId={currentUser.uid}
           users={users}
+          onReply={handleStoryReply}
         />
       )}
     </div>

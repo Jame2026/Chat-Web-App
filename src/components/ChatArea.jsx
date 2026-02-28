@@ -778,9 +778,6 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
                                         transition={{ duration: 0.2 }}
                                         onMouseEnter={() => {
                                             if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
-                                            hoverTimeoutRef.current = setTimeout(() => {
-                                                setHoveredMessageId(msg.id);
-                                            }, 2000);
                                         }}
                                         onMouseLeave={() => {
                                             if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
@@ -802,7 +799,17 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
                                             maxWidth: '90%',
                                             gap: '8px',
                                             position: 'relative'
-                                        }}>
+                                        }}
+                                            onMouseEnter={() => {
+                                                if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+                                                hoverTimeoutRef.current = setTimeout(() => {
+                                                    setHoveredMessageId(msg.id);
+                                                }, 120); // Quick 120ms delay for high responsiveness
+                                            }}
+                                            onMouseLeave={() => {
+                                                if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+                                                setHoveredMessageId(null);
+                                            }}>
                                             {/* Avatar */}
                                             <div style={{
                                                 width: 'var(--avatar-size-sm)',
@@ -824,7 +831,14 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
                                             }}>
                                                 {!msg.senderPhotoURL && (isMe ? 'Me' : (msg.senderName || 'Other')).charAt(0).toUpperCase()}
                                             </div>
-                                            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
+                                            <div style={{
+                                                minWidth: 0,
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                alignItems: isMe ? 'flex-end' : 'flex-start',
+                                                width: 'fit-content',
+                                                alignSelf: isMe ? 'flex-end' : 'flex-start'
+                                            }}>
                                                 {!isMe && (
                                                     <div style={{
                                                         fontSize: '12px',
@@ -842,7 +856,7 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
                                                     onMouseEnter={(e) => {
                                                         e.currentTarget.style.transform = 'translateY(-1px)';
                                                         e.currentTarget.style.boxShadow = '0 6px 15px rgba(0,0,0,0.15)';
-                                                        if (!isMediaOnly) e.currentTarget.style.animation = 'bubble-glow 2s infinite ease-in-out';
+                                                        e.currentTarget.style.animation = 'bubble-glow 2.5s infinite ease-in-out';
                                                     }}
                                                     onMouseLeave={(e) => {
                                                         e.currentTarget.style.transform = 'translateY(0)';
@@ -857,7 +871,7 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
                                                             : 'var(--bubble-other)'),
                                                         backdropFilter: (!isMediaOnly) ? 'blur(8px)' : 'none',
                                                         border: (!isMe && !isMediaOnly) ? '1px solid var(--border-color)' : 'none',
-                                                        color: isMe ? '#ffffff' : 'var(--text-primary)',
+                                                        color: '#ffffff',
                                                         fontSize: '14px',
                                                         lineHeight: '1.4',
                                                         boxShadow: isMediaOnly ? 'none' : '0 1px 2px rgba(0,0,0,0.05)',
@@ -865,9 +879,27 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
                                                         overflowWrap: 'break-word',
                                                         position: 'relative',
                                                         minWidth: editingMessageId === msg.id ? '220px' : 'auto',
-                                                        cursor: 'default'
+                                                        maxWidth: msg.isStoryReply ? '380px' : (isMediaOnly ? '400px' : '450px'),
+                                                        width: 'auto',
+                                                        cursor: 'default',
+                                                        animation: 'none'
                                                     }}
                                                 >
+                                                    {msg.isStoryReply && (
+                                                        <div style={{
+                                                            fontSize: '11px',
+                                                            fontWeight: '700',
+                                                            textTransform: 'uppercase',
+                                                            letterSpacing: '0.5px',
+                                                            marginBottom: '8px',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '6px',
+                                                            opacity: 0.8
+                                                        }}>
+                                                            Replying to Story
+                                                        </div>
+                                                    )}
                                                     {isScheduled && (
                                                         <div style={{
                                                             fontSize: '11px',
@@ -892,36 +924,54 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
                                                             <VoicePlayer url={msg.voiceURL} isMe={isMe} initialDuration={msg.audioDuration} />
                                                         </div>
                                                     )}
-                                                    {msg.videoURL && (
-                                                        <div style={{ marginBottom: msg.text || msg.voiceURL || msg.imageURL ? '8px' : '0' }}>
-                                                            <video
-                                                                src={msg.videoURL}
-                                                                controls
-                                                                style={{
-                                                                    maxWidth: '100%',
-                                                                    maxHeight: '850px',
-                                                                    borderRadius: '12px',
-                                                                    display: 'block',
-                                                                    cursor: 'pointer'
-                                                                }}
-                                                            />
+                                                    {msg.isStoryReply && msg.storyExpiresAt && Date.now() > msg.storyExpiresAt ? (
+                                                        <div style={{
+                                                            fontSize: '13px',
+                                                            fontStyle: 'italic',
+                                                            opacity: 0.8,
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '6px',
+                                                            marginBottom: msg.text ? '8px' : '0'
+                                                        }}>
+                                                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.5)' }} />
+                                                            Story has expired
                                                         </div>
-                                                    )}
-                                                    {msg.imageURL && (
-                                                        <div style={{ marginBottom: msg.text || msg.voiceURL || msg.videoURL ? '8px' : '0' }}>
-                                                            <img
-                                                                src={msg.imageURL}
-                                                                alt="Attached"
-                                                                style={{
-                                                                    maxWidth: '100%',
-                                                                    maxHeight: '850px',
-                                                                    borderRadius: '12px',
-                                                                    display: 'block',
-                                                                    cursor: 'pointer'
-                                                                }}
-                                                                onClick={() => window.open(msg.imageURL, '_blank')}
-                                                            />
-                                                        </div>
+                                                    ) : (
+                                                        <>
+                                                            {msg.videoURL && (
+                                                                <div style={{ marginBottom: msg.text || msg.voiceURL || (msg.imageURL && !msg.isStoryReply) ? '8px' : '0' }}>
+                                                                    <video
+                                                                        src={msg.videoURL}
+                                                                        controls
+                                                                        style={{
+                                                                            maxWidth: '100%',
+                                                                            maxHeight: msg.isStoryReply ? '850px' : '650px',
+                                                                            borderRadius: '12px',
+                                                                            display: 'block',
+                                                                            cursor: 'pointer',
+                                                                            objectFit: 'contain'
+                                                                        }}
+                                                                    />
+                                                                </div>
+                                                            )}
+                                                            {msg.imageURL && !msg.isStoryReply && (
+                                                                <div style={{ marginBottom: msg.text || msg.voiceURL || msg.videoURL ? '8px' : '0' }}>
+                                                                    <img
+                                                                        src={msg.imageURL}
+                                                                        alt="Attached"
+                                                                        style={{
+                                                                            maxWidth: '100%',
+                                                                            maxHeight: '850px',
+                                                                            borderRadius: '12px',
+                                                                            display: 'block',
+                                                                            cursor: 'pointer'
+                                                                        }}
+                                                                        onClick={() => window.open(msg.imageURL, '_blank')}
+                                                                    />
+                                                                </div>
+                                                            )}
+                                                        </>
                                                     )}
                                                     {editingMessageId === msg.id ? (
                                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -949,7 +999,7 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
                                                     ) : (
                                                         <>
                                                             {msg.text && (
-                                                                <div style={{ fontSize: `${activeConversation?.messageSize || 14}px`, lineHeight: '1.4' }}>
+                                                                <div style={{ fontSize: `${activeConversation?.messageSize || 14}px`, lineHeight: '1.4', color: '#fff' }}>
                                                                     {msg.text}
                                                                     {msg.edited && (
                                                                         <span style={{
@@ -1111,7 +1161,8 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
                                                     display: 'flex',
                                                     gap: '4px',
                                                     alignItems: 'center',
-                                                    paddingBottom: '20px'
+                                                    marginTop: '-4px', // Bring buttons closer to bubble
+                                                    height: '24px' // Fixed height instead of padding
                                                 }}>
                                                     {!isMe && (
                                                         <motion.div

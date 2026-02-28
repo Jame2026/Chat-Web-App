@@ -43,10 +43,12 @@ export const sendMessage = async (conversationId, senderId, text, imageURL = nul
             imageURL: imageURL || null,
             voiceURL: voiceURL || null,
             videoURL: videoURL || null,
+            isStoryReply: !!videoURL, // Flag to identify story replies
             audioDuration: audioDuration || null,
             senderName: senderMetadata.name || 'Unknown',
             senderPhotoURL: senderMetadata.photoURL || null,
             senderThemeColor: senderMetadata.themeColor || null,
+            storyExpiresAt: senderMetadata.storyExpiresAt || null,
             createdAt: scheduledDate ? scheduledDate : serverTimestamp(),
             scheduledAt: scheduledDate ? scheduledDate : null,
             status: scheduledDate ? 'scheduled' : 'sent',
