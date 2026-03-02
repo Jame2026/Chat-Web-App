@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Trash2, Eye, Send, Paperclip, Heart, Smile, Mic } from 'lucide-react';
+import { X, Trash2, Eye, Send, Paperclip, Heart, Smile, Mic, ChevronLeft, ChevronRight } from 'lucide-react';
 import { markStoryAsViewed, deleteStory, reactToStory } from '../services/storyService';
 import EmojiPicker from 'emoji-picker-react';
 
 const STORY_REACTIONS = ['❤️', '😂', '😮', '😢', '🔥', '👏', '🙌', '💯', '✨', '😍', '🎉', '🤯', '🙏', '🎈'];
 
-const StoryViewer = ({ storyUser, onClose, currentUserId, users = [], onReply }) => {
+const StoryViewer = ({ storyUser, onClose, currentUserId, users = [], onReply, onNextUser, onPrevUser }) => {
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const emojiPickerRef = useRef(null);
     const [currentIndex, setCurrentIndex] = useState(() => {
@@ -72,22 +72,30 @@ const StoryViewer = ({ storyUser, onClose, currentUserId, users = [], onReply })
     };
 
     const nextStory = (e) => {
-        e.stopPropagation();
+        if (e) e.stopPropagation();
         if (showViewers) return;
         if (currentIndex < stories.length - 1) {
             setCurrentIndex(prev => prev + 1);
             setProgress(0);
         } else {
-            onClose();
+            if (onNextUser) {
+                onNextUser();
+            } else {
+                onClose();
+            }
         }
     };
 
     const prevStory = (e) => {
-        e.stopPropagation();
+        if (e) e.stopPropagation();
         if (showViewers) return;
         if (currentIndex > 0) {
             setCurrentIndex(prev => prev - 1);
             setProgress(0);
+        } else {
+            if (onPrevUser) {
+                onPrevUser();
+            }
         }
     };
 
@@ -140,9 +148,21 @@ const StoryViewer = ({ storyUser, onClose, currentUserId, users = [], onReply })
                 setFloatingEmojis(prev => prev.filter(e => e.id !== newFloatingEmoji.id));
             }, 1500);
 
-            // Local optimistic update
+            // Local optimistic update to match DB structure: { emoji: [userIds] }
             if (!currentStory.reactions) currentStory.reactions = {};
-            currentStory.reactions[currentUserId] = emoji;
+
+            // Remove user from any existing reactions (single reaction rule)
+            Object.keys(currentStory.reactions).forEach(e => {
+                if (Array.isArray(currentStory.reactions[e])) {
+                    currentStory.reactions[e] = currentStory.reactions[e].filter(id => id !== currentUserId);
+                }
+            });
+
+            // Add new reaction
+            if (!currentStory.reactions[emoji]) currentStory.reactions[emoji] = [];
+            if (!currentStory.reactions[emoji].includes(currentUserId)) {
+                currentStory.reactions[emoji].push(currentUserId);
+            }
         } catch (error) {
             console.error(error);
         }
@@ -383,10 +403,48 @@ const StoryViewer = ({ storyUser, onClose, currentUserId, users = [], onReply })
                 />
 
                 {/* Left navigation area */}
-                <div onClick={prevStory} style={{ position: 'absolute', top: '15%', bottom: '15%', left: 0, width: '30%', zIndex: 5, cursor: 'pointer' }} />
+                <div onClick={prevStory} style={{ position: 'absolute', top: '15%', bottom: '15%', left: 0, width: '40%', zIndex: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', paddingLeft: '20px' }} className="nav-area">
+                    {currentIndex > 0 && (
+                        <div style={{
+                            background: 'rgba(255,255,255,0.2)',
+                            backdropFilter: 'blur(10px)',
+                            borderRadius: '50%',
+                            width: '44px',
+                            height: '44px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'white',
+                            opacity: 0,
+                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                            border: '1px solid rgba(255,255,255,0.3)',
+                            transform: 'translateX(-10px)'
+                        }} className="nav-btn">
+                            <ChevronLeft size={28} />
+                        </div>
+                    )}
+                </div>
 
                 {/* Right navigation area */}
-                <div onClick={nextStory} style={{ position: 'absolute', top: '15%', bottom: '15%', right: 0, width: '30%', zIndex: 5, cursor: 'pointer' }} />
+                <div onClick={nextStory} style={{ position: 'absolute', top: '15%', bottom: '15%', right: 0, width: '40%', zIndex: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: '20px' }} className="nav-area">
+                    <div style={{
+                        background: 'rgba(255,255,255,0.2)',
+                        backdropFilter: 'blur(10px)',
+                        borderRadius: '50%',
+                        width: '44px',
+                        height: '44px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                        opacity: 0,
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        border: '1px solid rgba(255,255,255,0.3)',
+                        transform: 'translateX(10px)'
+                    }} className="nav-btn">
+                        <ChevronRight size={28} />
+                    </div>
+                </div>
 
                 {/* Floating Emojis */}
                 {floatingEmojis.map((animObj) => (
@@ -498,6 +556,24 @@ const StoryViewer = ({ storyUser, onClose, currentUserId, users = [], onReply })
                     50% { opacity: 0.5; transform: scale(1.2); }
                     100% { opacity: 1; transform: scale(1); }
                 }
+                .nav-area:hover .nav-btn {
+                    opacity: 1 !important;
+                    transform: translateX(0) !important;
+                }
+                .nav-btn:hover {
+                    background: rgba(255,255,255,0.35) !important;
+                    transform: scale(1.1) !important;
+                }
+                .nav-btn:active {
+                    transform: scale(0.95) !important;
+                }
+                @media (hover: none) {
+                    .nav-btn {
+                        opacity: 0.6 !important;
+                        transform: translateX(0) !important;
+                    }
+                }
+                
                 `}
             </style>
 
@@ -514,24 +590,39 @@ const StoryViewer = ({ storyUser, onClose, currentUserId, users = [], onReply })
                     }
                 }} style={{
                     position: 'absolute',
-                    bottom: '20px',
+                    bottom: '100px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
                     color: 'white',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
-                    padding: '8px 16px',
-                    background: 'rgba(0,0,0,0.5)',
-                    borderRadius: '20px',
-                    zIndex: 10,
-                    cursor: 'pointer'
-                }}>
-                    <Eye size={16} />
-                    <span>{currentStory.viewers?.length || 0} views</span>
+                    padding: '10px 20px',
+                    background: 'rgba(0,0,0,0.4)',
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '24px',
+                    zIndex: 15,
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 15px rgba(0,0,0,0.3)',
+                    transition: 'all 0.2s'
+                }}
+                    onMouseEnter={e => {
+                        e.currentTarget.style.background = 'rgba(0,0,0,0.6)';
+                        e.currentTarget.style.transform = 'translateX(-50%) scale(1.05)';
+                    }}
+                    onMouseLeave={e => {
+                        e.currentTarget.style.background = 'rgba(0,0,0,0.4)';
+                        e.currentTarget.style.transform = 'translateX(-50%) scale(1)';
+                    }}
+                >
+                    <Eye size={18} />
+                    <span style={{ fontWeight: '600', fontSize: '14px' }}>{currentStory.viewers?.length || 0} views</span>
                 </div>
             )}
 
-            {/* Footer Area (Viewer: Private Reply Style) */}
-            {storyUser.id !== currentUserId && !showViewers && (
+            {/* Footer Area (Private Reply Style) - Hidden for Owner */}
+            {!showViewers && storyUser.id !== currentUserId && (
                 <div
                     onClick={(e) => e.stopPropagation()}
                     style={{
@@ -763,7 +854,11 @@ const StoryViewer = ({ storyUser, onClose, currentUserId, users = [], onReply })
                                     const viewer = users.find(u => u.id === viewerId || u.uid === viewerId);
                                     const name = viewer?.displayName || viewer?.name || 'User';
                                     const photo = viewer?.photoURL;
-                                    const userReaction = currentStory.reactions?.[viewerId];
+
+                                    // Correctly find the reaction for this user from { emoji: [userIds] } structure
+                                    const userReaction = Object.keys(currentStory.reactions || {}).find(emoji =>
+                                        Array.isArray(currentStory.reactions[emoji]) && currentStory.reactions[emoji].includes(viewerId)
+                                    );
 
                                     return (
                                         <div key={viewerId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px', borderRadius: '12px', transition: 'background-color 0.2s' }}>

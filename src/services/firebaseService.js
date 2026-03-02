@@ -134,16 +134,27 @@ export const toggleReaction = async (messageId, userId, emoji = '❤️') => {
 
         const data = msgDoc.data();
         const reactions = data.reactions || {};
-        const userReactions = reactions[emoji] || [];
 
-        if (userReactions.includes(userId)) {
-            await updateDoc(messageRef, {
-                [`reactions.${emoji}`]: arrayRemove(userId)
-            });
-        } else {
-            await updateDoc(messageRef, {
-                [`reactions.${emoji}`]: arrayUnion(userId)
-            });
+        let updates = {};
+        let alreadyHasThisEmoji = false;
+
+        // Find and remove user from ANY existing emoji reaction on this message
+        Object.keys(reactions).forEach(e => {
+            if (reactions[e] && reactions[e].includes(userId)) {
+                if (e === emoji) {
+                    alreadyHasThisEmoji = true;
+                }
+                updates[`reactions.${e}`] = arrayRemove(userId);
+            }
+        });
+
+        // If toggling on a NEW emoji, add it. If it was the same one, we just leave the removal update.
+        if (!alreadyHasThisEmoji) {
+            updates[`reactions.${emoji}`] = arrayUnion(userId);
+        }
+
+        if (Object.keys(updates).length > 0) {
+            await updateDoc(messageRef, updates);
         }
     } catch (error) {
         console.error("Error toggling reaction:", error);
