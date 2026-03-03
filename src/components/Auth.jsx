@@ -119,10 +119,10 @@ const Auth = ({ onAuthSuccess, theme }) => {
 
         try {
             await sendPasswordResetEmail(auth, email);
-            console.log("✅ Password reset email request sent successfully.");
-            setMessage('Password reset email sent! Please check your inbox and spam folder.');
+            console.log("Password reset email request sent successfully.");
+            setMessage('Check your email!, A password reset link has been sent to your inbox.');
         } catch (err) {
-            console.error("❌ Firebase Password Reset Error:", err);
+            console.error("Firebase Password Reset Error:", err);
             setError(err.message.replace('Firebase:', '').trim());
         } finally {
             setLoading(false);
@@ -551,6 +551,39 @@ const Auth = ({ onAuthSuccess, theme }) => {
                     border: 1px solid rgba(239, 68, 68, 0.1);
                     font-weight: 500;
                 }
+
+                .auth-message {
+                    color: #10b981; 
+                    background: rgba(16, 185, 129, 0.1);
+                    padding: 12px; 
+                    border-radius: 12px; 
+                    margin: 16px 0;
+                    font-size: 13px; 
+                    text-align: center;
+                    border: 1px solid rgba(16, 185, 129, 0.1);
+                    font-weight: 500;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 8px;
+                }
+                
+                .auth-message {
+                    color: #06c082ff; 
+                    background: rgba(16, 185, 129, 0.1);
+                    padding: 12px 16px; 
+                    border-radius: 12px; 
+                    margin: 16px 0;
+                    font-size: 13px; 
+                    text-align: center;
+                    border: 1px solid rgba(16, 185, 129, 0.1);
+                    font-weight: 600;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 10px;
+                    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.05);
+                }
                 
                 .light .auth-container { background: #f8fafc; }
                 .light .auth-card { background: rgba(21, 21, 21, 0.5); border-color: #262626ff; box-shadow: 0 20px 40px rgba(0,0,0,0.05); }
@@ -558,6 +591,7 @@ const Auth = ({ onAuthSuccess, theme }) => {
                 .light .auth-header p { color: #c4c5c7ff; }
                 .light .input-group input { background: #ffffff; border-color: #e2e8f0; color: #0f172a; }
                 .light .social-btn { background: #ffffff; border-color: #e2e8f0; color: #0f172a; }
+                .light .auth-message { background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.2); color: #059669; }
                 .light .blob-1 { background: #bfdbfe; }
                 .light .blob-2 { background: #ddd6fe; }
                 .light .blob-3 { background: #fbcfe8; }
