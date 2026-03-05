@@ -1,25 +1,30 @@
 import React, { useState } from 'react';
-import { auth, db, googleProvider, githubProvider } from '../firebase';
+import { auth, db, googleProvider, githubProvider, facebookProvider } from '../firebase';
 import {
     createUserWithEmailAndPassword,
     signInWithEmailAndPassword,
     signInWithPopup,
     updateProfile,
-    sendPasswordResetEmail
+    sendPasswordResetEmail,
+    RecaptchaVerifier,
+    signInWithPhoneNumber
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Lock, User, AtSign, ArrowRight, ArrowLeft, Github, Check, ShieldAlert, Loader2, LogIn, UserPlus } from 'lucide-react';
+import { Mail, Lock, User, AtSign, ArrowRight, ArrowLeft, Github, Check, ShieldAlert, Loader2, LogIn, UserPlus, Facebook, Phone, MessageSquare } from 'lucide-react';
 
 const Auth = ({ onAuthSuccess, theme }) => {
     const [isLogin, setIsLogin] = useState(true);
-    const [email, setEmail] = useState('');
+    const [identifier, setIdentifier] = useState('');
     const [password, setPassword] = useState('');
     const [displayName, setDisplayName] = useState('');
     const [error, setError] = useState('');
     const [message, setMessage] = useState('');
     const [loading, setLoading] = useState(false);
     const [isForgotMode, setIsForgotMode] = useState(false);
+    const [isPhoneMode, setIsPhoneMode] = useState(false);
+    const [verificationCode, setVerificationCode] = useState('');
+    const [confirmationResult, setConfirmationResult] = useState(null);
     const [resendTimer, setResendTimer] = useState(0);
 
     React.useEffect(() => {
@@ -104,9 +109,189 @@ const Auth = ({ onAuthSuccess, theme }) => {
         }
     };
 
+    const handleFacebookLogin = async () => {
+        setLoading(true);
+        setError('');
+        try {
+            const result = await signInWithPopup(auth, facebookProvider);
+            const user = result.user;
+
+            const userDocRef = doc(db, 'users', user.uid);
+            const userDoc = await getDoc(userDocRef);
+
+            const existingData = userDoc.exists() ? userDoc.data() : {};
+            const photoToUse = existingData.photoURL || user.photoURL;
+
+            // Sync profile info, but keep manual photo if it exists
+            await setDoc(userDocRef, {
+                uid: user.uid,
+                displayName: user.displayName || user.email?.split('@')[0] || 'Facebook User',
+                email: user.email,
+                photoURL: photoToUse,
+                online: true,
+                lastSeen: serverTimestamp(),
+                joinedAt: existingData.joinedAt || serverTimestamp()
+            }, { merge: true });
+
+            console.log("🔄 Facebook Login - Photo source:", photoToUse === user.photoURL ? "Facebook" : "Database (Manual)");
+            onAuthSuccess();
+        } catch (err) {
+            console.error(err);
+            if (err.code === 'auth/account-exists-with-different-credential') {
+                setError('An account already exists with the same email. Try logging in with Google or GitHub.');
+            } else {
+                setError(err.message.replace('Firebase:', '').trim());
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const setupRecaptcha = async () => {
+        try {
+            if (window.recaptchaVerifier) {
+                window.recaptchaVerifier.clear();
+                window.recaptchaVerifier = null;
+            }
+
+            const container = document.getElementById('recaptcha-container');
+            if (container) {
+                container.innerHTML = '';
+            }
+
+            window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+                'size': 'invisible',
+                'callback': () => {
+                    console.log("reCAPTCHA verified");
+                },
+                'expired-callback': () => {
+                    setError("reCAPTCHA expired. Please try again.");
+                }
+            });
+
+            return await window.recaptchaVerifier.render();
+        } catch (err) {
+            console.error("reCAPTCHA Setup Error:", err);
+            throw new Error("Failed to initialize security check. Please refresh and try again.");
+        }
+    };
+
+    const isPhoneIdentifier = (val) => /^\+?[\d\s-]{8,}$/.test(val) && !val.includes('@');
+
+    const handleSendCode = async (e, phoneVal) => {
+        if (e) e.preventDefault();
+        let targetPhone = (phoneVal || identifier).trim();
+
+        // Check for display name if registering via phone
+        if (!isLogin && !displayName) {
+            setError('Please enter a Display Name to create your account.');
+            return;
+        }
+
+        // Auto-fix local number format (e.g., 0xxxxxxxxx -> +855xxxxxxxxx)
+        if (targetPhone.startsWith('0')) {
+            targetPhone = '+855' + targetPhone.substring(1);
+        }
+
+        // Final validation for E.164 format
+        if (!targetPhone.startsWith('+')) {
+            setError('Please include your country code starting with + (e.g., +855...)');
+            return;
+        }
+
+        // Remove all non-digit characters except the leading +
+        targetPhone = '+' + targetPhone.substring(1).replace(/\D/g, '');
+
+        if (targetPhone.length < 8) {
+            setError('Please enter a complete phone number with country code.');
+            return;
+        }
+
+        setLoading(true);
+        setError('');
+        try {
+            await setupRecaptcha();
+            const appVerifier = window.recaptchaVerifier;
+
+            const confirmation = await signInWithPhoneNumber(auth, targetPhone, appVerifier);
+            setConfirmationResult(confirmation);
+            setMessage('Verification code sent to ' + targetPhone);
+            setIsPhoneMode(true);
+        } catch (err) {
+            console.error("Phone Auth Error:", err);
+
+            if (err.code === 'auth/invalid-app-credential') {
+                const currentDomain = window.location.hostname;
+                setError(`Security Check Failed: Please ensure "${currentDomain}" is added to "Authorized Domains" in your Firebase Console (Authentication -> Settings -> Authorized Domains).`);
+            } else {
+                setError(err.message.replace('Firebase:', '').trim());
+            }
+
+            if (window.recaptchaVerifier) {
+                window.recaptchaVerifier.clear();
+                window.recaptchaVerifier = null;
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleVerifyCode = async (e) => {
+        if (e) e.preventDefault();
+        if (!verificationCode) {
+            setError('Please enter the 6-digit verification code.');
+            return;
+        }
+
+        setLoading(true);
+        setError('');
+        try {
+            const result = await confirmationResult.confirm(verificationCode);
+            const user = result.user;
+
+            // Check if user document exists, if not create it
+            const userDocRef = doc(db, 'users', user.uid);
+            const userDoc = await getDoc(userDocRef);
+
+            if (!userDoc.exists()) {
+                // Sync name to Firebase Auth profile as well
+                if (displayName) {
+                    try {
+                        await updateProfile(user, { displayName });
+                    } catch (pErr) {
+                        console.warn("Failed to update auth profile name:", pErr);
+                    }
+                }
+
+                await setDoc(userDocRef, {
+                    uid: user.uid,
+                    displayName: displayName || identifier,
+                    phoneNumber: user.phoneNumber || (isPhoneIdentifier(identifier) ? identifier : ''),
+                    email: user.email || (!isPhoneIdentifier(identifier) ? identifier : ''),
+                    photoURL: '',
+                    online: true,
+                    lastSeen: serverTimestamp(),
+                    joinedAt: serverTimestamp()
+                });
+            } else {
+                await setDoc(userDocRef, {
+                    online: true,
+                    lastSeen: serverTimestamp()
+                }, { merge: true });
+            }
+
+            onAuthSuccess();
+        } catch (err) {
+            console.error(err);
+            setError(err.message.replace('Firebase:', '').trim());
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleForgotPassword = async (e) => {
         if (e) e.preventDefault();
-        if (!email) {
+        if (!identifier) {
             setError('Please enter your email address first.');
             return;
         }
@@ -115,10 +300,10 @@ const Auth = ({ onAuthSuccess, theme }) => {
         setError('');
         setMessage('');
 
-        console.log("Attempting to send password reset email to:", email);
+        console.log("Attempting to send password reset email to:", identifier);
 
         try {
-            await sendPasswordResetEmail(auth, email);
+            await sendPasswordResetEmail(auth, identifier);
             console.log("Password reset email request sent successfully.");
             setMessage('Check your email!, A password reset link has been sent to your inbox.');
         } catch (err) {
@@ -132,16 +317,23 @@ const Auth = ({ onAuthSuccess, theme }) => {
 
 
     const handleSubmit = async (e) => {
-        e.preventDefault();
+        if (e) e.preventDefault();
+
+        const isPhone = isPhoneIdentifier(identifier);
+
+        if (isPhone) {
+            return handleSendCode(e, identifier);
+        }
+
         setError('');
         setLoading(true);
 
         try {
             setMessage('');
             if (isLogin) {
-                await signInWithEmailAndPassword(auth, email, password);
+                await signInWithEmailAndPassword(auth, identifier, password);
             } else {
-                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                const userCredential = await createUserWithEmailAndPassword(auth, identifier, password);
                 const user = userCredential.user;
 
                 await updateProfile(user, { displayName });
@@ -149,7 +341,7 @@ const Auth = ({ onAuthSuccess, theme }) => {
                 await setDoc(doc(db, 'users', user.uid), {
                     uid: user.uid,
                     displayName,
-                    email,
+                    email: identifier,
                     photoURL: '',
                     online: true,
                     lastSeen: serverTimestamp(),
@@ -202,57 +394,93 @@ const Auth = ({ onAuthSuccess, theme }) => {
                     </p>
                 </div>
 
-                <form onSubmit={isForgotMode ? handleForgotPassword : handleSubmit} className="auth-form">
+                <div id="recaptcha-container"></div>
+
+                <form onSubmit={isForgotMode ? handleForgotPassword : (isPhoneMode ? (confirmationResult ? handleVerifyCode : handleSendCode) : handleSubmit)} className="auth-form">
                     <AnimatePresence mode="wait">
-                        {!isLogin && !isForgotMode && (
+                        {!isForgotMode && (
                             <motion.div
-                                key="name-field"
-                                initial={{ opacity: 0, height: 0 }}
-                                animate={{ opacity: 1, height: 'auto' }}
-                                exit={{ opacity: 0, height: 0 }}
-                                className="input-field-wrapper"
+                                key="unified-fields"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                className="input-fields-container"
                             >
-                                <div className="input-group">
-                                    <User className="input-icon" size={18} />
-                                    <input
-                                        type="text"
-                                        placeholder="Display Name"
-                                        value={displayName}
-                                        onChange={(e) => setDisplayName(e.target.value)}
-                                        required={!isLogin}
-                                    />
-                                </div>
+                                {!isLogin && (
+                                    <div className="input-field-wrapper">
+                                        <div className="input-group">
+                                            <User className="input-icon" size={18} />
+                                            <input
+                                                type="text"
+                                                placeholder="Display Name"
+                                                value={displayName}
+                                                onChange={(e) => setDisplayName(e.target.value)}
+                                                required={!isLogin}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+
+                                {!confirmationResult ? (
+                                    <>
+                                        <div className="input-field-wrapper">
+                                            <div className="input-group">
+                                                <AtSign className="input-icon" size={18} />
+                                                <input
+                                                    type="text"
+                                                    placeholder="Email or Phone Number"
+                                                    value={identifier}
+                                                    onChange={(e) => setIdentifier(e.target.value)}
+                                                    required
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {(!isPhoneIdentifier(identifier) || !isLogin) && (
+                                            <div className="input-field-wrapper">
+                                                <div className="input-group">
+                                                    <Lock className="input-icon" size={18} />
+                                                    <input
+                                                        type="password"
+                                                        placeholder="Password"
+                                                        value={password}
+                                                        onChange={(e) => setPassword(e.target.value)}
+                                                        required={!isPhoneIdentifier(identifier)}
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+                                    </>
+                                ) : (
+                                    <div className="input-field-wrapper">
+                                        <div className="input-group">
+                                            <MessageSquare className="input-icon" size={18} />
+                                            <input
+                                                type="text"
+                                                placeholder="6-digit OTP Code"
+                                                value={verificationCode}
+                                                onChange={(e) => setVerificationCode(e.target.value)}
+                                                required={!!confirmationResult}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
                             </motion.div>
                         )}
-                    </AnimatePresence>
-
-                    <div className="input-field-wrapper">
-                        <div className="input-group">
-                            <Mail className="input-icon" size={18} />
-                            <input
-                                type="email"
-                                placeholder="Email Address"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                required
-                            />
-                        </div>
-                    </div>
-
-                    {!isForgotMode && (
-                        <div className="input-field-wrapper">
-                            <div className="input-group">
-                                <Lock className="input-icon" size={18} />
-                                <input
-                                    type="password"
-                                    placeholder="Password"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    required={!isForgotMode}
-                                />
+                        {isForgotMode && (
+                            <div className="input-field-wrapper">
+                                <div className="input-group">
+                                    <Mail className="input-icon" size={18} />
+                                    <input
+                                        type="email"
+                                        placeholder="Email Address"
+                                        value={identifier}
+                                        onChange={(e) => setIdentifier(e.target.value)}
+                                        required
+                                    />
+                                </div>
                             </div>
-                        </div>
-                    )}
+                        )}
+                    </AnimatePresence>
 
                     {isLogin && !isForgotMode && (
                         <div className="forgot-password-wrapper">
@@ -300,7 +528,7 @@ const Auth = ({ onAuthSuccess, theme }) => {
                         <span>
                             {loading
                                 ? 'Processing...'
-                                : (isForgotMode ? 'Send Reset Link' : (isLogin ? 'Sign In' : 'Get Started'))
+                                : (isForgotMode ? 'Send Reset Link' : (confirmationResult ? 'Verify Code' : (isPhoneIdentifier(identifier) ? 'Send Code' : (isLogin ? 'Sign In' : 'Get Started'))))
                             }
                         </span>
                         {!loading && <ArrowRight size={18} />}
@@ -308,7 +536,7 @@ const Auth = ({ onAuthSuccess, theme }) => {
                 </form>
 
                 <div className="auth-divider">
-                    <span>{isForgotMode ? "Or sign in with" : "Social Login"}</span>
+                    <span>{(isForgotMode || isPhoneMode) ? "Or go back" : "Social Login"}</span>
                 </div>
 
                 <div className="social-grid">
@@ -320,24 +548,38 @@ const Auth = ({ onAuthSuccess, theme }) => {
                         <Github size={18} />
                         GitHub
                     </button>
+                    <button onClick={handleFacebookLogin} className="social-btn facebook" disabled={loading}>
+                        <Facebook size={18} color="#1877F2" />
+                        Facebook
+                    </button>
                 </div>
 
                 <div className="auth-footer">
-                    {isForgotMode ? (
+                    {isForgotMode || confirmationResult ? (
                         <button
                             onClick={() => {
                                 setIsForgotMode(false);
+                                setIsPhoneMode(false);
+                                setConfirmationResult(null);
                                 setError('');
                                 setMessage('');
                             }}
                             className="toggle-auth"
                         >
-                            Back to Login
+                            Back to {isLogin ? 'Login' : 'Register'}
                         </button>
                     ) : (
                         <>
                             <span>{isLogin ? "Don't have an account?" : "Already member?"}</span>
-                            <button onClick={() => setIsLogin(!isLogin)} className="toggle-auth">
+                            <button onClick={() => {
+                                setIsLogin(!isLogin);
+                                setIdentifier('');
+                                setPassword('');
+                                setDisplayName('');
+                                setError('');
+                                setMessage('');
+                                setConfirmationResult(null);
+                            }} className="toggle-auth">
                                 {isLogin ? 'Create one now' : 'Sign in here'}
                             </button>
                         </>
@@ -514,6 +756,41 @@ const Auth = ({ onAuthSuccess, theme }) => {
                     grid-template-columns: 1fr 1fr;
                     gap: 12px;
                     margin-bottom: 32px;
+                }
+                
+                .social-btn.facebook {
+                    grid-column: span 2;
+                }
+
+                .phone-login-option {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 8px;
+                    width: 100%;
+                    background: none;
+                    border: none;
+                    color: #64748b;
+                    font-size: 13px;
+                    font-weight: 600;
+                    margin-top: 16px;
+                    cursor: pointer;
+                    transition: color 0.2s;
+                    opacity: 0.8;
+                }
+                .phone-login-option:hover {
+                    color: #10b981;
+                    opacity: 1;
+                }
+                
+                .input-fields-container {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0;
+                }
+
+                .auth-method-tabs {
+                    display: none;
                 }
 
                 .social-btn {
