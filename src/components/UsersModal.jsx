@@ -10,6 +10,7 @@ const UsersModal = ({ isOpen, onClose, users, onSelectUser, currentUser }) => {
 
     const filteredUsers = users.filter(u =>
         u.uid !== currentUser?.uid &&
+        !u.blockedUsers?.includes(currentUser?.uid) &&
         (u.displayName?.toLowerCase().includes(search.toLowerCase()) ||
             u.email?.toLowerCase().includes(search.toLowerCase()))
     );

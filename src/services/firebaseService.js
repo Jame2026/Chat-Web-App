@@ -333,10 +333,18 @@ export const leaveGroup = async (groupId, userId) => {
     if (!groupId || !userId) return;
     const groupRef = doc(db, 'groups', groupId);
     try {
-        await updateDoc(groupRef, {
-            members: arrayRemove(userId)
-        });
-        console.log(`✅ User ${userId} left group ${groupId}`);
+        const groupDoc = await getDoc(groupRef);
+        if (groupDoc.exists() && groupDoc.data().createdBy === userId) {
+            // Admin is leaving, delete the group instead
+            await deleteDoc(groupRef);
+            console.log(`Group ${groupId} deleted because admin left`);
+        } else {
+            // Normal user leaving
+            await updateDoc(groupRef, {
+                members: arrayRemove(userId)
+            });
+            console.log(`User ${userId} left group ${groupId}`);
+        }
     } catch (error) {
         console.error("❌ Error leaving group:", error);
         throw error;

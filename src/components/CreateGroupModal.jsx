@@ -13,6 +13,7 @@ const CreateGroupModal = ({ isOpen, onClose, users, currentUser, onCreateGroup }
 
     const filteredUsers = users.filter(u =>
         u.uid !== currentUser?.uid &&
+        !u.blockedUsers?.includes(currentUser?.uid) &&
         (u.displayName?.toLowerCase().includes(search.toLowerCase()) ||
             u.email?.toLowerCase().includes(search.toLowerCase()))
     );

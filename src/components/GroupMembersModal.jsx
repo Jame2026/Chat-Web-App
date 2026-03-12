@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, UserMinus, LogOut, Crown, Settings, Users, Camera, Check, Image as ImageIcon, Search, UserPlus } from 'lucide-react';
+import { X, UserMinus, LogOut, Trash2, Crown, Settings, Users, Camera, Check, Image as ImageIcon, Search, UserPlus } from 'lucide-react';
 
 
 const GroupMembersModal = ({ isOpen, onClose, group, users, currentUser, onKickUser, onAddMember, onLeaveGroup, onUpdateGroup, initialTab = 'members' }) => {
@@ -242,6 +242,7 @@ const GroupMembersModal = ({ isOpen, onClose, group, users, currentUser, onKickU
                                         }}>
                                             {users.filter(u =>
                                                 !group.members.includes(u.uid) &&
+                                                !u.blockedUsers?.includes(currentUser?.uid) &&
                                                 (u.displayName?.toLowerCase().includes(search.toLowerCase()) ||
                                                     u.email?.toLowerCase().includes(search.toLowerCase()))
                                             ).length === 0 ? (
@@ -251,6 +252,7 @@ const GroupMembersModal = ({ isOpen, onClose, group, users, currentUser, onKickU
                                             ) : (
                                                 users.filter(u =>
                                                     !group.members.includes(u.uid) &&
+                                                    !u.blockedUsers?.includes(currentUser?.uid) &&
                                                     (u.displayName?.toLowerCase().includes(search.toLowerCase()) ||
                                                         u.email?.toLowerCase().includes(search.toLowerCase()))
                                                 ).map(user => (
@@ -381,7 +383,8 @@ const GroupMembersModal = ({ isOpen, onClose, group, users, currentUser, onKickU
                                                 {isMemberMe && (
                                                     <button
                                                         onClick={() => {
-                                                            if (window.confirm('Are you sure you want to leave this group?')) {
+                                                            const confirmMessage = isMemberOwner ? 'Are you sure you want to delete this group? This action cannot be undone.' : 'Are you sure you want to leave this group?';
+                                                            if (window.confirm(confirmMessage)) {
                                                                 onLeaveGroup();
                                                                 onClose();
                                                             }
@@ -400,8 +403,8 @@ const GroupMembersModal = ({ isOpen, onClose, group, users, currentUser, onKickU
                                                             gap: '6px'
                                                         }}
                                                     >
-                                                        <LogOut size={16} />
-                                                        Leave
+                                                        {isMemberOwner ? <Trash2 size={16} /> : <LogOut size={16} />}
+                                                        {isMemberOwner ? 'Delete' : 'Leave'}
                                                     </button>
                                                 )}
                                             </div>

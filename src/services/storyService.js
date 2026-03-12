@@ -2,7 +2,7 @@ import { db, storage } from '../firebase';
 import { collection, addDoc, serverTimestamp, query, where, onSnapshot, arrayUnion, updateDoc, doc, deleteDoc, getDocs } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 
-export const uploadStory = (userId, file, text = '', onProgress) => {
+export const uploadStory = (userId, file, text = '', textPosition = null, onProgress) => {
     return new Promise((resolve, reject) => {
         const storageRef = ref(storage, `stories/${userId}/${Date.now()}_${file.name}`);
         const uploadTask = uploadBytesResumable(storageRef, file);
@@ -25,6 +25,7 @@ export const uploadStory = (userId, file, text = '', onProgress) => {
                         userId,
                         videoUrl: downloadURL,
                         text,
+                        textPosition, // Store the position of the text
                         storagePath: uploadTask.snapshot.ref.fullPath,
                         createdAt: serverTimestamp(),
                         expiresAt: expiresAt.getTime(), // Store as JS timestamp for easy querying

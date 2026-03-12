@@ -12,6 +12,9 @@ const StoryRow = ({ currentUser, users, stories, onStoryClick, userSettings }) =
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const fileInputRef = useRef(null);
     const emojiPickerRef = useRef(null);
+    const previewContainerRef = useRef(null);
+    const [textPosition, setTextPosition] = useState({ x: 50, y: 80 }); // x, y as percentages
+    const [isDragging, setIsDragging] = useState(false);
 
     // Group stories by user
     const userStories = {};
@@ -25,9 +28,23 @@ const StoryRow = ({ currentUser, users, stories, onStoryClick, userSettings }) =
     // current user stories
     const myStories = userStories[currentUser?.uid] || [];
 
-    // get valid users with stories (excluding current user)
+    const currentUserProfile = users.find(u => u.id === currentUser?.uid || u.uid === currentUser?.uid);
+    const blockedByMe = currentUserProfile?.blockedUsers || [];
+
+    // get valid users with stories (excluding current user and blocked users)
     const usersWithStories = Object.keys(userStories)
-        .filter(id => id !== currentUser?.uid)
+        .filter(id => {
+            if (id === currentUser?.uid) return false;
+            
+            // Filter if I blocked them
+            if (blockedByMe.includes(id)) return false;
+            
+            // Filter if they blocked me
+            const otherUserProfile = users.find(u => u.id === id || u.uid === id);
+            if (otherUserProfile?.blockedUsers?.includes(currentUser?.uid)) return false;
+            
+            return true;
+        })
         .map(id => {
             const user = users.find(u => u.id === id);
             return {
@@ -91,13 +108,15 @@ const StoryRow = ({ currentUser, users, stories, onStoryClick, userSettings }) =
         setUploading(true);
         const fileToUpload = selectedFile;
         const textToUpload = storyText;
+        const positionToUpload = textPosition;
 
         // Reset local state for modal
         setSelectedFile(null);
         setStoryText('');
+        setTextPosition({ x: 50, y: 80 });
 
         try {
-            await uploadStory(currentUser.uid, fileToUpload, textToUpload, (prog) => {
+            await uploadStory(currentUser.uid, fileToUpload, textToUpload, positionToUpload, (prog) => {
                 setUploadProgress(prog);
             });
         } catch (err) {
@@ -108,6 +127,31 @@ const StoryRow = ({ currentUser, users, stories, onStoryClick, userSettings }) =
             setUploadProgress(0);
             if (fileInputRef.current) fileInputRef.current.value = '';
         }
+    };
+
+    const handleDragStart = () => {
+        setIsDragging(true);
+    };
+
+    const handleDrag = (e) => {
+        if (!isDragging || !previewContainerRef.current) return;
+
+        const rect = previewContainerRef.current.getBoundingClientRect();
+        const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+        const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
+
+        let x = ((clientX - rect.left) / rect.width) * 100;
+        let y = ((clientY - rect.top) / rect.height) * 100;
+
+        // Constraint within bounds
+        x = Math.max(10, Math.min(90, x));
+        y = Math.max(10, Math.min(90, y));
+
+        setTextPosition({ x, y });
+    };
+
+    const handleDragEnd = () => {
+        setIsDragging(false);
     };
 
     const renderAvatar = (userObj, isMe, hasUnviewed, type) => {
@@ -337,39 +381,60 @@ const StoryRow = ({ currentUser, users, stories, onStoryClick, userSettings }) =
                         </div>
 
                         {/* Video Preview */}
-                        <div style={{ flex: 1, position: 'relative', borderRadius: '16px', overflow: 'hidden', backgroundColor: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <div 
+                            ref={previewContainerRef}
+                            onMouseMove={handleDrag}
+                            onMouseUp={handleDragEnd}
+                            onTouchMove={handleDrag}
+                            onTouchEnd={handleDragEnd}
+                            style={{ 
+                                flex: 1, 
+                                position: 'relative', 
+                                borderRadius: '16px', 
+                                overflow: 'hidden', 
+                                backgroundColor: '#000', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'center',
+                                userSelect: 'none'
+                            }}
+                        >
                             <video
                                 src={previewUrl}
                                 autoPlay
                                 loop
                                 muted
-                                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                                style={{ width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none' }}
                             />
 
                             {/* Overlay Text Preview */}
                             {storyText && (
-                                <div style={{
-                                    position: 'absolute',
-                                    bottom: '40px',
-                                    left: '20px',
-                                    right: '20px',
-                                    textAlign: 'center',
-                                    color: 'white',
-                                    fontSize: '18px',
-                                    fontWeight: 'bold',
-                                    textShadow: '0 2px 4px rgba(0,0,0,0.8)',
-                                    padding: '10px',
-                                    background: 'rgba(0,0,0,0.3)',
-                                    borderRadius: '12px',
-                                    backdropFilter: 'blur(4px)'
-                                }}>
+                                <div 
+                                    onMouseDown={handleDragStart}
+                                    onTouchStart={handleDragStart}
+                                    style={{
+                                        position: 'absolute',
+                                        top: `${textPosition.y}%`,
+                                        left: `${textPosition.x}%`,
+                                        transform: 'translate(-50%, -50%)',
+                                        textAlign: 'center',
+                                        color: 'white',
+                                        fontSize: '22px', 
+                                        fontWeight: 'bold',
+                                        textShadow: '0 2px 8px rgba(0,0,0,1), 0 1px 2px rgba(0,0,0,0.8)',
+                                        padding: '0',
+                                        background: 'none',
+                                        cursor: isDragging ? 'grabbing' : 'grab',
+                                        pointerEvents: 'auto',
+                                        maxWidth: '85%',
+                                        zIndex: 10,
+                                        userSelect: 'none'
+                                    }}>
                                     {storyText}
                                 </div>
                             )}
-                        </div>
-
-                        {/* Input Area */}
-                        <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', background: 'rgba(255,255,255,0.1)', padding: '16px', borderRadius: '20px', backdropFilter: 'blur(10px)', position: 'relative' }}>
+                        </div>                        {/* Input Area */}
+                        <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', background: 'rgba(0,0,0,0.3)', padding: '16px', borderRadius: '20px', position: 'relative' }}>
                             <div style={{ flex: 1, position: 'relative' }}>
                                 <Type size={18} style={{ position: 'absolute', left: '12px', top: '12px', color: 'rgba(255,255,255,0.5)', zIndex: 1 }} />
                                 <textarea

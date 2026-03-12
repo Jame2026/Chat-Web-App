@@ -174,7 +174,7 @@ const StoryViewer = ({ storyUser, onClose, currentUserId, users = [], onReply })
             onReply(storyUser.id, currentStory, replyText, thumbnail);
             setReplyText('');
         }
-    }, [replyText, onReply, storyUser.id, currentStory, captureThumbnail]);
+    }, [replyText, onReply, storyUser.id, currentStory, captureThumbnail, setReplyText]);
 
     const startRecording = React.useCallback(async () => {
         isRecordingCancelled.current = false;
@@ -242,6 +242,12 @@ const StoryViewer = ({ storyUser, onClose, currentUserId, users = [], onReply })
         const secs = seconds % 60;
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     };
+
+    const currentUserProfile = users.find(u => u.id === currentUserId || u.uid === currentUserId);
+    const isBlockedByMe = currentUserProfile?.blockedUsers?.includes(storyUser.id);
+    const otherUserProfile = users.find(u => u.id === storyUser.id || u.uid === storyUser.id);
+    const hasBlockedMe = otherUserProfile?.blockedUsers?.includes(currentUserId);
+    const isBlocked = isBlockedByMe || hasBlockedMe;
 
     if (!currentStory) return null;
 
@@ -407,31 +413,28 @@ const StoryViewer = ({ storyUser, onClose, currentUserId, users = [], onReply })
                     </div>
                 ))}
 
-                {/* Story Text Backdrop & Content */}
+                {/* Story Text Content */}
                 {currentStory.text && (
                     <div style={{
                         position: 'absolute',
-                        bottom: storyUser.id === currentUserId ? '80px' : '100px',
-                        left: '20px',
-                        right: '20px',
+                        top: currentStory.textPosition ? `${currentStory.textPosition.y}%` : (storyUser.id === currentUserId ? 'calc(100% - 120px)' : 'calc(100% - 150px)'),
+                        left: currentStory.textPosition ? `${currentStory.textPosition.x}%` : '50%',
+                        transform: 'translate(-50%, -50%)',
                         textAlign: 'center',
                         zIndex: 9,
-                        pointerEvents: 'none'
+                        pointerEvents: 'none',
+                        width: 'auto',
+                        maxWidth: '85%'
                     }}>
                         <div style={{
                             display: 'inline-block',
-                            padding: '12px 20px',
-                            background: 'rgba(0,0,0,0.4)',
-                            backdropFilter: 'blur(10px)',
-                            borderRadius: '16px',
+                            padding: '0',
+                            background: 'none',
                             color: 'white',
-                            fontSize: '18px',
-                            fontWeight: '500',
-                            maxWidth: '100%',
+                            fontSize: '22px', // Slightly larger
+                            fontWeight: 'bold',
                             wordWrap: 'break-word',
-                            boxShadow: '0 4px 15px rgba(0,0,0,0.3)',
-                            textShadow: '0 1px 2px rgba(0,0,0,0.5)',
-                            border: '1px solid rgba(255,255,255,0.1)'
+                            textShadow: '0 2px 8px rgba(0,0,0,1), 0 1px 2px rgba(0,0,0,0.8)'
                         }}>
                             {currentStory.text}
                         </div>
@@ -532,170 +535,201 @@ const StoryViewer = ({ storyUser, onClose, currentUserId, users = [], onReply })
 
             {/* Footer Area (Viewer: Private Reply Style) */}
             {storyUser.id !== currentUserId && !showViewers && (
-                <div
-                    onClick={(e) => e.stopPropagation()}
-                    style={{
-                        position: 'absolute',
-                        bottom: '30px',
-                        left: '0',
-                        right: '0',
-                        padding: '0 20px',
-                        display: 'flex',
-                        justifyContent: 'center',
-                        zIndex: 10
-                    }}
-                >
+                isBlocked ? (
                     <div
-                        className="story-footer-container"
+                        onClick={(e) => e.stopPropagation()}
                         style={{
-                            width: '100%',
-                            background: '#2d323e',
-                            borderRadius: '40px',
-                            padding: '10px 16px',
+                            position: 'absolute',
+                            bottom: '30px',
+                            left: '0',
+                            right: '0',
+                            padding: '0 20px',
                             display: 'flex',
-                            alignItems: 'center',
-                            gap: '12px',
-                            boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
-                            transition: 'all 0.3s',
-                            border: '1px solid rgba(255,255,255,0.05)'
+                            justifyContent: 'center',
+                            zIndex: 10
                         }}
                     >
-                        {/* Attachment Icon */}
-                        <button style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px', flexShrink: 0 }}>
-                            <Paperclip size={22} style={{ transform: 'rotate(45deg)' }} />
-                        </button>
-
-                        {/* Reply Input */}
-                        <div style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
-                            <input
-                                type="text"
-                                value={replyText}
-                                onChange={(e) => setReplyText(e.target.value)}
-                                placeholder="Reply privately..."
-                                style={{
-                                    flex: 1,
-                                    background: 'none',
-                                    border: 'none',
-                                    color: 'white',
-                                    outline: 'none',
-                                    fontSize: '16px',
-                                    fontWeight: '400',
-                                    opacity: 0.9
-                                }}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
-                                        handleSendReply();
-                                    }
-                                }}
-                            />
+                        <div style={{
+                            width: '100%',
+                            maxWidth: '660px',
+                            background: 'rgba(0,0,0,0.6)',
+                            borderRadius: '40px',
+                            padding: '12px 24px',
+                            textAlign: 'center',
+                            color: 'rgba(255,255,255,0.7)',
+                            fontSize: '14px',
+                            backdropFilter: 'blur(10px)',
+                            border: '1px solid rgba(255,255,255,0.05)',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+                        }}>
+                            {isBlockedByMe ? "You have blocked this user. Unblock them to reply." : "This user has blocked you. You cannot send messages to them."}
                         </div>
-
-                        {/* Right Action Icons */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', color: '#94a3b8', flexShrink: 0, position: 'relative' }}>
-                            {/* Emoji Picker Modal */}
-                            {showEmojiPicker && (
-                                <div ref={emojiPickerRef} style={{ position: 'absolute', bottom: '60px', right: '0', zIndex: 100 }}>
-                                    <EmojiPicker
-                                        onEmojiClick={(emojiData) => {
-                                            handleReact({ stopPropagation: () => { } }, emojiData.emoji);
-                                            setShowEmojiPicker(false);
-                                        }}
-                                        theme="dark"
-                                        lazyLoadEmojis={true}
-                                    />
-                                </div>
-                            )}
-
-                            {replyText.trim() ? (
-                                <button
-                                    onClick={handleSendReply}
-                                    style={{
-                                        background: 'none',
-                                        border: 'none',
-                                        color: 'var(--accent-color)',
-                                        cursor: 'pointer',
-                                        padding: '4px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        transition: 'transform 0.2s'
-                                    }}
-                                    onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.1)'}
-                                    onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
-                                >
-                                    <Send size={22} fill="currentColor" />
-                                </button>
-                            ) : (
-                                <>
-                                    <button
-                                        onClick={(e) => handleReact(e, '❤️')}
-                                        style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}
-                                    >
-                                        <Heart size={22} />
-                                    </button>
-                                    <button
-                                        onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                                        style={{ background: 'none', border: 'none', color: showEmojiPicker ? 'var(--accent-color)' : '#94a3b8', cursor: 'pointer', padding: '4px' }}
-                                    >
-                                        <Smile size={22} />
-                                    </button>
-                                    <button
-                                        onClick={startRecording}
-                                        style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}
-                                    >
-                                        <Mic size={22} />
-                                    </button>
-                                </>
-                            )}
-                        </div>
-
-                        {/* Recording Overlay */}
-                        {isRecording && (
-                            <div style={{
-                                position: 'absolute',
-                                top: 0, left: 0, right: 0, bottom: 0,
+                    </div>
+                ) : (
+                    <div
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                            position: 'absolute',
+                            bottom: '30px',
+                            left: '0',
+                            right: '0',
+                            padding: '0 20px',
+                            display: 'flex',
+                            justifyContent: 'center',
+                            zIndex: 10
+                        }}
+                    >
+                        <div
+                            className="story-footer-container"
+                            style={{
+                                width: '100%',
                                 background: '#2d323e',
                                 borderRadius: '40px',
+                                padding: '10px 16px',
                                 display: 'flex',
                                 alignItems: 'center',
-                                justifyContent: 'space-between',
-                                padding: '0 20px',
-                                zIndex: 11
-                            }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--accent-color)' }}>
-                                    <div style={{ width: '8px', height: '8px', background: '#ff4d4d', borderRadius: '50%', animation: 'pulse 1s infinite' }} />
-                                    <span style={{ fontWeight: 'bold', fontSize: '15px' }}>{formatTime(recordingTime)}</span>
-                                </div>
-                                <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+                                gap: '12px',
+                                boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
+                                transition: 'all 0.3s',
+                                border: '1px solid rgba(255,255,255,0.05)'
+                            }}
+                        >
+                            {/* Attachment Icon */}
+                            <button style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px', flexShrink: 0 }}>
+                                <Paperclip size={22} style={{ transform: 'rotate(45deg)' }} />
+                            </button>
+
+                            {/* Reply Input */}
+                            <div style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
+                                <input
+                                    type="text"
+                                    value={replyText}
+                                    onChange={(e) => setReplyText(e.target.value)}
+                                    placeholder="Reply privately..."
+                                    style={{
+                                        flex: 1,
+                                        background: 'none',
+                                        border: 'none',
+                                        color: 'white',
+                                        outline: 'none',
+                                        fontSize: '16px',
+                                        fontWeight: '400',
+                                        opacity: 0.9
+                                    }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            handleSendReply();
+                                        }
+                                    }}
+                                />
+                            </div>
+
+                            {/* Right Action Icons */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', color: '#94a3b8', flexShrink: 0, position: 'relative' }}>
+                                {/* Emoji Picker Modal */}
+                                {showEmojiPicker && (
+                                    <div ref={emojiPickerRef} style={{ position: 'absolute', bottom: '60px', right: '0', zIndex: 100 }}>
+                                        <EmojiPicker
+                                            onEmojiClick={(emojiData) => {
+                                                handleReact({ stopPropagation: () => { } }, emojiData.emoji);
+                                                setShowEmojiPicker(false);
+                                            }}
+                                            theme="dark"
+                                            lazyLoadEmojis={true}
+                                        />
+                                    </div>
+                                )}
+
+                                {replyText.trim() ? (
                                     <button
-                                        onClick={cancelRecording}
-                                        style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '14px', fontWeight: '600' }}
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        onClick={stopRecording}
+                                        onClick={handleSendReply}
                                         style={{
-                                            background: 'var(--accent-color)',
+                                            background: 'none',
                                             border: 'none',
-                                            color: 'white',
-                                            width: '36px',
-                                            height: '36px',
-                                            borderRadius: '50%',
+                                            color: 'var(--accent-color)',
+                                            cursor: 'pointer',
+                                            padding: '4px',
                                             display: 'flex',
                                             alignItems: 'center',
-                                            justifyContent: 'center',
-                                            cursor: 'pointer'
+                                            transition: 'transform 0.2s'
                                         }}
+                                        onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.1)'}
+                                        onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
                                     >
-                                        <Send size={18} fill="currentColor" />
+                                        <Send size={22} fill="currentColor" />
                                     </button>
-                                </div>
+                                ) : (
+                                    <>
+                                        <button
+                                            onClick={(e) => handleReact(e, '❤️')}
+                                            style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}
+                                        >
+                                            <Heart size={22} />
+                                        </button>
+                                        <button
+                                            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                                            style={{ background: 'none', border: 'none', color: showEmojiPicker ? 'var(--accent-color)' : '#94a3b8', cursor: 'pointer', padding: '4px' }}
+                                        >
+                                            <Smile size={22} />
+                                        </button>
+                                        <button
+                                            onClick={startRecording}
+                                            style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}
+                                        >
+                                            <Mic size={22} />
+                                        </button>
+                                    </>
+                                )}
                             </div>
-                        )}
+
+                            {/* Recording Overlay */}
+                            {isRecording && (
+                                <div style={{
+                                    position: 'absolute',
+                                    top: 0, left: 0, right: 0, bottom: 0,
+                                    background: '#2d323e',
+                                    borderRadius: '40px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    padding: '0 20px',
+                                    zIndex: 11
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--accent-color)' }}>
+                                        <div style={{ width: '8px', height: '8px', background: '#ff4d4d', borderRadius: '50%', animation: 'pulse 1s infinite' }} />
+                                        <span style={{ fontWeight: 'bold', fontSize: '15px' }}>{formatTime(recordingTime)}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+                                        <button
+                                            onClick={cancelRecording}
+                                            style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '14px', fontWeight: '600' }}
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={stopRecording}
+                                            style={{
+                                                background: 'var(--accent-color)',
+                                                border: 'none',
+                                                color: 'white',
+                                                width: '36px',
+                                                height: '36px',
+                                                borderRadius: '50%',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                cursor: 'pointer'
+                                            }}
+                                        >
+                                            <Send size={18} fill="currentColor" />
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
-                </div>
-            )
-            }
+                )
+            )}
 
             {/* Viewers List Modal */}
             {
