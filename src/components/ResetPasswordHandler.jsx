@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { auth } from '../firebase';
 import { confirmPasswordReset, verifyPasswordResetCode } from 'firebase/auth';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Lock, AtSign, Check, ShieldAlert, Loader2, ArrowRight } from 'lucide-react';
+import { Lock, AtSign, Check, ShieldAlert, Loader2, ArrowRight, Eye, EyeOff } from 'lucide-react';
 
 const ResetPasswordHandler = ({ theme }) => {
     const [newPassword, setNewPassword] = useState('');
@@ -11,6 +11,7 @@ const ResetPasswordHandler = ({ theme }) => {
     const [message, setMessage] = useState('');
     const [email, setEmail] = useState('');
     const [isVerified, setIsVerified] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
 
     const urlParams = new URLSearchParams(window.location.search);
     const actionCode = urlParams.get('oobCode');
@@ -89,13 +90,21 @@ const ResetPasswordHandler = ({ theme }) => {
                             <div className="input-group">
                                 <Lock className="input-icon" size={18} />
                                 <input
-                                    type="password"
+                                    type={showPassword ? "text" : "password"}
                                     placeholder="Enter new password"
                                     value={newPassword}
                                     onChange={(e) => setNewPassword(e.target.value)}
                                     required
                                     minLength={6}
+                                    style={{ paddingRight: '48px' }}
                                 />
+                                <button
+                                    type="button"
+                                    className="password-toggle-icon"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                >
+                                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                </button>
                             </div>
                         </div>
 
@@ -217,6 +226,23 @@ const ResetPasswordHandler = ({ theme }) => {
                     box-shadow: 0 0 0 4px rgba(88, 101, 242, 0.15);
                 }
                 .input-group input:focus + .input-icon { color: #5865f2; }
+
+                .password-toggle-icon {
+                    position: absolute;
+                    right: 16px;
+                    background: none;
+                    border: none;
+                    color: #64748b;
+                    cursor: pointer;
+                    padding: 0;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    transition: color 0.2s;
+                }
+                .password-toggle-icon:hover {
+                    color: #5865f2;
+                }
 
                 .auth-submit {
                     width: 100%; padding: 16px;

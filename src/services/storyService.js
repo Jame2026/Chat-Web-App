@@ -1,5 +1,5 @@
 import { db, storage } from '../firebase';
-import { collection, addDoc, serverTimestamp, query, where, onSnapshot, arrayUnion, updateDoc, doc, deleteDoc, getDocs } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, where, onSnapshot, arrayUnion, arrayRemove, updateDoc, doc, deleteDoc, getDocs } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 
 export const uploadStory = (userId, file, text = '', textPosition = null, onProgress) => {
@@ -100,9 +100,29 @@ export const deleteStory = async (storyId, storagePath) => {
 export const reactToStory = async (storyId, viewerId, emoji) => {
     try {
         const storyRef = doc(db, 'stories', storyId);
-        await updateDoc(storyRef, {
-            [`reactions.${viewerId}`]: emoji
+        const storyDoc = await getDocs(query(collection(db, 'stories'), where('__name__', '==', storyId)));
+        if (storyDoc.empty) return;
+
+        const data = storyDoc.docs[0].data();
+        const reactions = data.reactions || {};
+
+        let updates = {};
+        let alreadyHasThisEmoji = false;
+
+        Object.keys(reactions).forEach(e => {
+            if (reactions[e] && reactions[e].includes(viewerId)) {
+                if (e === emoji) alreadyHasThisEmoji = true;
+                updates[`reactions.${e}`] = arrayRemove(viewerId);
+            }
         });
+
+        if (!alreadyHasThisEmoji) {
+            updates[`reactions.${emoji}`] = arrayUnion(viewerId);
+        }
+
+        if (Object.keys(updates).length > 0) {
+            await updateDoc(storyRef, updates);
+        }
     } catch (error) {
         console.error("Error reacting to story:", error);
     }

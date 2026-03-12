@@ -58,6 +58,63 @@ function App() {
   const [stories, setStories] = useState([]);
   const [selectedStoryUser, setSelectedStoryUser] = useState(null);
 
+  const usersWithStories = useMemo(() => {
+    if (!currentUser || !stories.length) return [];
+
+    const userStories = {};
+    stories.forEach(story => {
+      if (!userStories[story.userId]) userStories[story.userId] = [];
+      userStories[story.userId].push(story);
+    });
+
+    const myStories = userStories[currentUser.uid] || [];
+    const others = Object.keys(userStories)
+      .filter(id => id !== currentUser.uid)
+      .map(id => {
+        const user = users.find(u => u.uid === id || u.id === id);
+        return {
+          id,
+          user: user || { id, name: 'Unknown' },
+          stories: userStories[id].sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0)),
+          hasUnviewed: userStories[id].some(s => !s.viewers.includes(currentUser.uid))
+        };
+      })
+      .sort((a, b) => {
+        if (a.hasUnviewed && !b.hasUnviewed) return -1;
+        if (!a.hasUnviewed && b.hasUnviewed) return 1;
+        const aLatest = a.stories[a.stories.length - 1].createdAt?.seconds || 0;
+        const bLatest = b.stories[b.stories.length - 1].createdAt?.seconds || 0;
+        return bLatest - aLatest;
+      });
+
+    const final = [];
+    if (myStories.length > 0) {
+      final.push({
+        id: currentUser.uid,
+        user: currentUser,
+        stories: myStories.sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0)),
+        hasUnviewed: myStories.some(s => !s.viewers.includes(currentUser.uid))
+      });
+    }
+    return [...final, ...others];
+  }, [stories, users, currentUser]);
+
+  const handleNextStoryUser = (currentUserId) => {
+    const idx = usersWithStories.findIndex(u => u.id === currentUserId);
+    if (idx !== -1 && idx < usersWithStories.length - 1) {
+      setSelectedStoryUser(usersWithStories[idx + 1]);
+    } else {
+      setSelectedStoryUser(null);
+    }
+  };
+
+  const handlePrevStoryUser = (currentUserId) => {
+    const idx = usersWithStories.findIndex(u => u.id === currentUserId);
+    if (idx !== -1 && idx > 0) {
+      setSelectedStoryUser(usersWithStories[idx - 1]);
+    }
+  };
+
   useEffect(() => {
     if (currentUser) {
       const unsubscribe = subscribeToStories(setStories);
@@ -785,6 +842,34 @@ function App() {
 
   const handleReaction = async (messageId, emoji) => {
     if (!currentUser) return;
+
+    // Optimistic update for single reaction per person
+    setMessages(prev => prev.map(msg => {
+      if (msg.id === messageId) {
+        const newReactions = { ...msg.reactions };
+        let alreadyHasThis = false;
+
+        // Find and remove user from ANY existing emoji reaction on this message
+        Object.keys(newReactions).forEach(e => {
+          if (newReactions[e] && newReactions[e].includes(currentUser.uid)) {
+            if (e === emoji) {
+              alreadyHasThis = true;
+            }
+            newReactions[e] = newReactions[e].filter(uid => uid !== currentUser.uid);
+          }
+        });
+
+        // If toggling on a NEW emoji, add it. If it was the same one, we leave it removed.
+        if (!alreadyHasThis) {
+          if (!newReactions[emoji]) newReactions[emoji] = [];
+          newReactions[emoji].push(currentUser.uid);
+        }
+
+        return { ...msg, reactions: newReactions };
+      }
+      return msg;
+    }));
+
     await toggleReaction(messageId, currentUser.uid, emoji);
   };
 
@@ -1158,11 +1243,14 @@ function App() {
 
       {selectedStoryUser && (
         <StoryViewer
+          key={selectedStoryUser.id}
           storyUser={selectedStoryUser}
           onClose={() => setSelectedStoryUser(null)}
           currentUserId={currentUser.uid}
           users={users}
           onReply={handleStoryReply}
+          onNextUser={() => handleNextStoryUser(selectedStoryUser.id)}
+          onPrevUser={() => handlePrevStoryUser(selectedStoryUser.id)}
         />
       )}
     </div>

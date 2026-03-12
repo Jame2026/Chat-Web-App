@@ -20,6 +20,7 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
     const [reactionPickerMessageId, setReactionPickerMessageId] = useState(null);
     const fileInputRef = useRef(null);
     const hoverTimeoutRef = useRef(null);
+    const hideTimeoutRef = useRef(null);
     const [isRecording, setIsRecording] = useState(false);
     const [recordingTime, setRecordingTime] = useState(0);
     const [mediaRecorder, setMediaRecorder] = useState(null);
@@ -72,7 +73,11 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+            if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
+        };
     }, []);
 
     // Update current time every 30 seconds to refresh message visibility
@@ -778,10 +783,14 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
                                         transition={{ duration: 0.2 }}
                                         onMouseEnter={() => {
                                             if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+                                            if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
                                         }}
                                         onMouseLeave={() => {
                                             if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
-                                            setHoveredMessageId(null);
+                                            if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
+                                            hideTimeoutRef.current = setTimeout(() => {
+                                                setHoveredMessageId(null);
+                                            }, 800); // 800ms delay to allow moving mouse to the reaction bar
                                         }}
                                         style={{
                                             display: 'flex',
@@ -802,13 +811,17 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
                                         }}
                                             onMouseEnter={() => {
                                                 if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+                                                if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
                                                 hoverTimeoutRef.current = setTimeout(() => {
                                                     setHoveredMessageId(msg.id);
                                                 }, 120); // Quick 120ms delay for high responsiveness
                                             }}
                                             onMouseLeave={() => {
                                                 if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
-                                                setHoveredMessageId(null);
+                                                if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
+                                                hideTimeoutRef.current = setTimeout(() => {
+                                                    setHoveredMessageId(null);
+                                                }, 800);
                                             }}>
                                             {/* Avatar */}
                                             <div style={{
@@ -1162,11 +1175,11 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
                                                             animate={{ opacity: 1, scale: 1, x: 0 }}
                                                             style={{
                                                                 display: 'flex',
-                                                                gap: '2px', // Reduced gap between emojis
+                                                                gap: '4px',
                                                                 backgroundColor: 'var(--bg-secondary)',
-                                                                padding: '3px 6px', // Reduced padding inside the pill
-                                                                borderRadius: '20px',
-                                                                boxShadow: '0 4px 15px rgba(0,0,0,0.15)',
+                                                                padding: '6px 12px',
+                                                                borderRadius: '24px',
+                                                                boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
                                                                 border: '1px solid var(--border-color)',
                                                                 zIndex: 5
                                                             }}
@@ -1178,13 +1191,13 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
                                                                     style={{
                                                                         background: 'none',
                                                                         border: 'none',
-                                                                        fontSize: '15px', // Reduced font size of emoji from 18px
+                                                                        fontSize: '20px',
                                                                         cursor: 'pointer',
-                                                                        padding: '2px',
+                                                                        padding: '4px',
                                                                         transition: 'transform 0.1s',
                                                                         opacity: msg.reactions?.[emoji]?.includes(currentUserId) ? 1 : 0.7
                                                                     }}
-                                                                    onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.3)'}
+                                                                    onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.4)'}
                                                                     onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                                                                 >
                                                                     {emoji}
@@ -1198,9 +1211,9 @@ const ChatArea = ({ activeConversation, messages, onSendMessage, onBack, theme, 
                                                                 style={{
                                                                     background: 'none',
                                                                     border: 'none',
-                                                                    fontSize: '14px', // Reduced size of the plus button
+                                                                    fontSize: '18px',
                                                                     cursor: 'pointer',
-                                                                    padding: '2px',
+                                                                    padding: '4px',
                                                                     color: 'var(--text-secondary)',
                                                                     display: 'flex',
                                                                     alignItems: 'center',
